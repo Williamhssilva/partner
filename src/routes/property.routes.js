@@ -27,4 +27,7 @@ router.get('/count', propertyController.getTotalPropertiesCount);
 // Featured properties
 router.get('/', propertyController.getProperties);
 
+// Nova rota para o dashboard do corretor
+router.get('/agent/dashboard', protect, propertyController.getAgentDashboard);
+
 module.exports = router;

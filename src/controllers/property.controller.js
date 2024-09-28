@@ -243,3 +243,49 @@ exports.getFeaturedProperties = async (req, res) => {
         });
     }
 };
+
+// Adicione a função getAgentDashboard
+exports.getAgentDashboard = async (req, res) => {
+    try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'Usuário não autenticado ou ID inválido'
+            });
+        }
+
+        // Busca as 5 propriedades mais recentes de toda a plataforma
+        const recentProperties = await Property.find()
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate('agent', 'name'); // Popula o nome do agente para exibição
+
+        // Estatísticas específicas do corretor logado
+        const totalProperties = await Property.countDocuments({ agent: req.user._id });
+        const activeProperties = await Property.countDocuments({ agent: req.user._id, status: 'disponível' });
+        const soldProperties = await Property.countDocuments({ agent: req.user._id, status: 'vendido' });
+
+        console.log('Dados do dashboard:', { 
+            totalProperties, 
+            activeProperties, 
+            soldProperties, 
+            recentProperties 
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                totalProperties,
+                activeProperties,
+                soldProperties,
+                recentProperties
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao carregar o dashboard do corretor:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Erro ao carregar o dashboard do corretor'
+        });
+    }
+};
