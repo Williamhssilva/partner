@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Autenticação</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Autenticação</h1>
+        
+        <div id="authForms">
+            <div id="signupForm">
+                <h2>Registro</h2>
+                <input type="text" id="signupName" placeholder="Nome">
+                <input type="email" id="signupEmail" placeholder="Email">
+                <input type="password" id="signupPassword" placeholder="Senha">
+                <select id="signupRole">
+                    <option value="corretor">Corretor</option>
+                    <option value="administrador">Administrador</option>
+                </select>
+                <button onclick="signup()">Registrar</button>
+            </div>
+
+            <div id="loginForm">
+                <h2>Login</h2>
+                <input type="email" id="loginEmail" placeholder="Email">
+                <input type="password" id="loginPassword" placeholder="Senha">
+                <button onclick="login()">Entrar</button>
+            </div>
+        </div>
+
+        <div id="userProfile" style="display: none;">
+            <h2>Perfil do Usuário</h2>
+            <p id="userName"></p>
+            <p id="userEmail"></p>
+            <p id="userRole"></p>
+            <button onclick="logout()">Sair</button>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

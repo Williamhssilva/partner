@@ -1,4 +1,3 @@
-// src/models/property.model.js
 const mongoose = require('mongoose');
 
 const propertySchema = new mongoose.Schema({
@@ -19,8 +18,16 @@ const propertySchema = new mongoose.Schema({
   images: [String], // URLs das imagens
   agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: { type: String, enum: ['disponível', 'vendido', 'alugado'], default: 'disponível' },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  visitRequests: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    requestedAt: { type: Date, default: Date.now }
+  }],
+  featured: { type: Boolean, default: false },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  image: { type: String, required: true }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Property', propertySchema);
