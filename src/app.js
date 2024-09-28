@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
+const Property = require('./models/property.model'); // Adicione esta linha
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -29,15 +30,32 @@ app.use(cors({
 }));
 
 // Middleware para parsing de JSON
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Servir arquivos estáticos da pasta frontend
 app.use(express.static(path.join(__dirname, '../../frontend')));
 
 // Conectar ao MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Conectado ao MongoDB'))
-  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+mongoose.connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 5000
+})
+.then(() => {
+    console.log('Conectado ao MongoDB');
+    console.log('URI de conexão:', process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@')); // Oculta as credenciais
+})
+.catch(err => {
+    console.error('Erro detalhado ao conectar ao MongoDB:', err);
+    process.exit(1);
+});
+
+mongoose.connection.on('error', err => {
+    console.error('Erro na conexão com o MongoDB:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('Desconectado do MongoDB');
+});
 
 // Adicione isso antes das rotas
 app.use((req, res, next) => {
@@ -83,6 +101,26 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+// Adicione a rota de teste de banco de dados
+app.get('/api/dbtest', async (req, res) => {
+  try {
+    const startTime = Date.now();
+    const count = await Property.countDocuments();
+    const endTime = Date.now();
+    res.json({ 
+      message: 'Teste de banco de dados bem-sucedido',
+      count: count,
+      time: `${endTime - startTime}ms`
+    });
+  } catch (error) {
+    console.error('Erro no teste de banco de dados:', error);
+    res.status(500).json({ 
+      message: 'Erro no teste de banco de dados',
+      error: error.message
+    });
+  }
 });
 
 module.exports = app;

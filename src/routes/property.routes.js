@@ -3,38 +3,28 @@ const router = express.Router();
 const propertyController = require('../controllers/property.controller');
 const { protect } = require('../middleware/auth.middleware');
 
+// Verifique se todas as funções do controlador estão definidas
+console.log('Funções do controlador:', Object.keys(propertyController));
+
 // Rotas públicas
-router.get('/', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+router.route('/')
+  .get(propertyController.getProperties)
+  .post(protect, propertyController.createProperty);
 
-        const properties = await propertyController.getPropertiesPaginated(skip, limit);
-        const total = await propertyController.getTotalPropertiesCount();
-
-        res.json({
-            success: true,
-            data: properties,
-            currentPage: page,
-            totalPages: Math.ceil(total / limit),
-            total
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-router.get('/:id', propertyController.getProperty);
-
-// Rotas protegidas
-router.use(protect);
-router.post('/', propertyController.createProperty);
-router.put('/:id', propertyController.updateProperty);
-router.delete('/:id', propertyController.deleteProperty);
+router.route('/:id')
+  .get(propertyController.getProperty)
+  .patch(protect, propertyController.updateProperty)
+  .delete(protect, propertyController.deleteProperty);
 
 // Rotas adicionais
-router.post('/:id/favorite', propertyController.toggleFavorite);
-router.post('/:id/visit', propertyController.requestVisit);
+router.post('/:id/favorite', protect, propertyController.toggleFavorite);
+router.post('/:id/visit', protect, propertyController.requestVisit);
+
+// Paginação e contagem de propriedades
+router.get('/paginated', propertyController.getPropertiesPaginated);
+router.get('/count', propertyController.getTotalPropertiesCount);
+
+// Featured properties
+router.get('/', propertyController.getProperties);
 
 module.exports = router;

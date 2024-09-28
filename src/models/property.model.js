@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const propertySchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  type: { type: String, required: true }, // ex: casa, apartamento, terreno
+  type: { type: String, required: true, enum: ['casa', 'apartamento', 'terreno'] },
   price: { type: Number, required: true },
   address: {
     street: { type: String, required: true },
@@ -30,4 +30,9 @@ const propertySchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Property', propertySchema);
+// Adicione isso antes de criar o modelo
+propertySchema.index({ featured: 1, price: 1, bedrooms: 1 });
+
+const Property = mongoose.model('Property', propertySchema);
+
+module.exports = Property;

@@ -284,3 +284,49 @@ exports.approveAgentNoAuth = async (req, res) => {
         });
     }
 };
+
+/**
+ * Obtém os corretores pendentes de aprovação.
+ * @param {Object} req - Objeto de requisição Express.
+ * @param {Object} res - Objeto de resposta Express.
+ */
+exports.rejectAgent = async (req, res, next) => {
+    try {
+        console.log(`Tentando rejeitar agente com ID: ${req.params.id}`);
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            console.log('Usuário não encontrado');
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Usuário não encontrado'
+            });
+        }
+
+        console.log(`Usuário encontrado: ${user.name}, role: ${user.role}, isApproved: ${user.isApproved}`);
+
+        if (user.role !== 'corretor' || user.isApproved) {
+            console.log('Usuário não é um corretor pendente');
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Usuário não é um corretor pendente'
+            });
+        }
+
+        // Remover o usuário do banco de dados
+        console.log('Tentando remover o usuário');
+        await User.deleteOne({ _id: user._id });
+
+        console.log('Usuário removido com sucesso');
+        res.status(200).json({
+            status: 'success',
+            message: 'Corretor rejeitado com sucesso'
+        });
+    } catch (error) {
+        console.error('Erro ao rejeitar corretor:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Erro interno do servidor ao rejeitar corretor'
+        });
+    }
+};

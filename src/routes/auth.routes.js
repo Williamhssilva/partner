@@ -17,4 +17,7 @@ router.patch('/approve-agent/:id', authController.approveAgentNoAuth);
 // Rota para obter corretores pendentes
 router.get('/pending-agents', authController.getPendingAgents);
 
+// Rota para rejeitar um agente (corretor)
+router.patch('/reject-agent/:id', authController.rejectAgent);
+
 module.exports = router;

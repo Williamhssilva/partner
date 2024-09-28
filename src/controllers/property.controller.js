@@ -5,56 +5,51 @@ const asyncHandler = require('../middleware/async');
 // @desc    Get all properties (with pagination)
 // @route   GET /api/properties
 // @access  Public
-exports.getProperties = asyncHandler(async (req, res, next) => {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const startIndex = (page - 1) * limit;
+exports.getProperties = async (req, res) => {
+    try {
+        const { page = 1, limit = 10, maxPrice, bedrooms, featured } = req.query;
+        
+        const query = {};
+        
+        if (maxPrice) {
+            query.price = { $lte: parseFloat(maxPrice) };
+        }
+        
+        if (bedrooms) {
+            query.bedrooms = { $gte: parseInt(bedrooms) };
+        }
+        
+        if (featured === 'true') {
+            query.featured = true;
+        }
 
-    let query = {};
+        console.log('Query final:', query);
 
-    // Filtro de localização
-    if (req.query.location) {
-        query['address.city'] = { $regex: req.query.location, $options: 'i' };
+        const properties = await Property.find(query)
+            .limit(parseInt(limit))
+            .skip((parseInt(page) - 1) * parseInt(limit));
+
+        const total = await Property.countDocuments(query);
+
+        res.status(200).json({
+            status: 'success',
+            results: properties.length,
+            total,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parseInt(limit)),
+            data: {
+                properties
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao buscar propriedades:', error);
+        res.status(500).json({ 
+            status: 'error',
+            message: 'Erro interno do servidor ao buscar propriedades' 
+        });
     }
-
-    // Filtro de preço
-    if (req.query.minPrice || req.query.maxPrice) {
-        query.price = {};
-        if (req.query.minPrice) query.price.$gte = Number(req.query.minPrice);
-        if (req.query.maxPrice) query.price.$lte = Number(req.query.maxPrice);
-    }
-
-    // Filtro de quartos
-    if (req.query.bedrooms) {
-        query.bedrooms = { $gte: Number(req.query.bedrooms) };
-    }
-
-    // Filtro de área mínima
-    if (req.query.minArea) {
-        query.area = { $gte: Number(req.query.minArea) };
-    }
-
-    // Filtro de propriedades em destaque
-    if (req.query.featured) {
-        query.featured = req.query.featured === 'true';
-    }
-
-    console.log('Query a ser executada:', query);
-
-    const total = await Property.countDocuments(query);
-    const properties = await Property.find(query).skip(startIndex).limit(limit);
-
-    console.log('Propriedades encontradas:', properties);
-
-    res.status(200).json({
-        success: true,
-        count: properties.length,
-        data: properties,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        total
-    });
-});
+};
 
 // @desc    Get single property
 // @route   GET /api/properties/:id
@@ -72,60 +67,83 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @desc    Create new property
 // @route   POST /api/properties
 // @access  Private
-exports.createProperty = asyncHandler(async (req, res, next) => {
-    // Add user to req.body
-    req.body.user = req.user.id;
+exports.createProperty = async (req, res) => {
+    try {
+        const newProperty = await Property.create({
+            ...req.body,
+            agent: req.user._id // Assumindo que o usuário autenticado é o agente
+        });
 
-    const property = await Property.create(req.body);
-
-    res.status(201).json({
-        success: true,
-        data: property
-    });
-});
+        res.status(201).json({
+            status: 'success',
+            data: {
+                property: newProperty
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
 
 // @desc    Update property
 // @route   PUT /api/properties/:id
 // @access  Private
-exports.updateProperty = asyncHandler(async (req, res, next) => {
-    let property = await Property.findById(req.params.id);
+exports.updateProperty = async (req, res) => {
+    try {
+        const property = await Property.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        });
 
-    if (!property) {
-        return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
+        if (!property) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Propriedade não encontrada'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                property
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
     }
-
-    // Make sure user is property owner
-    if (property.user.toString() !== req.user.id && req.user.role !== 'admin') {
-        return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
-    }
-
-    property = await Property.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true
-    });
-
-    res.status(200).json({ success: true, data: property });
-});
+};
 
 // @desc    Delete property
 // @route   DELETE /api/properties/:id
 // @access  Private
-exports.deleteProperty = asyncHandler(async (req, res, next) => {
-    const property = await Property.findById(req.params.id);
+exports.deleteProperty = async (req, res) => {
+    try {
+        const property = await Property.findByIdAndDelete(req.params.id);
 
-    if (!property) {
-        return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
+        if (!property) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Propriedade não encontrada'
+            });
+        }
+
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
     }
-
-    // Make sure user is property owner
-    if (property.user.toString() !== req.user.id && req.user.role !== 'admin') {
-        return next(new ErrorResponse(`User ${req.user.id} is not authorized to delete this property`, 401));
-    }
-
-    await property.remove();
-
-    res.status(200).json({ success: true, data: {} });
-});
+};
 
 // @desc    Toggle favorite property
 // @route   POST /api/properties/:id/favorite
@@ -188,3 +206,40 @@ exports.getTotalPropertiesCount = async (query = {}) => {
 };
 
 // Não é necessário exportar novamente, pois já estamos usando exports.
+
+// Adicione qualquer função que esteja faltando
+exports.someFunction = async (req, res) => {
+    res.status(501).json({
+        status: 'error',
+        message: 'Esta função ainda não foi implementada'
+    });
+};
+
+// Adicione a função getFeaturedProperties
+exports.getFeaturedProperties = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const properties = await Property.find({ featured: true })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Property.countDocuments({ featured: true });
+
+        res.status(200).json({
+            status: 'success',
+            results: properties.length,
+            total,
+            data: {
+                properties
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
