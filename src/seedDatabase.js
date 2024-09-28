@@ -9,107 +9,83 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Conectado ao MongoDB'))
   .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
+// Função para gerar um número aleatório dentro de um intervalo
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
+
+// Função para gerar um preço aleatório
+const randomPrice = () => randomInt(100000, 1000000);
+
+// Array de cidades para usar nos endereços
+const cities = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Salvador', 'Brasília', 'Curitiba', 'Fortaleza', 'Recife', 'Porto Alegre', 'Manaus'];
+
+// Array de tipos de propriedades
+const propertyTypes = ['Apartamento', 'Casa', 'Studio', 'Cobertura', 'Sobrado', 'Kitnet'];
+
+// Função para gerar uma propriedade aleatória
+const generateRandomProperty = (clienteId, agenteId) => ({
+    title: `${propertyTypes[randomInt(0, propertyTypes.length - 1)]} em ${cities[randomInt(0, cities.length - 1)]}`,
+    description: `Uma ${propertyTypes[randomInt(0, propertyTypes.length - 1)]} incrível com localização privilegiada.`,
+    price: randomPrice(),
+    address: {
+        street: `Rua ${randomInt(1, 100)}`,
+        city: cities[randomInt(0, cities.length - 1)],
+        state: 'Estado',
+        zipCode: `${randomInt(10000, 99999)}-${randomInt(100, 999)}`
+    },
+    bedrooms: randomInt(1, 5),
+    bathrooms: randomInt(1, 4),
+    area: randomInt(30, 300),
+    image: `https://placehold.co/600x400?text=${encodeURIComponent(propertyTypes[randomInt(0, propertyTypes.length - 1)])}`,
+    featured: Math.random() < 0.2, // 20% de chance de ser destaque
+    type: propertyTypes[randomInt(0, propertyTypes.length - 1)],
+    user: clienteId,
+    agent: agenteId
+});
+
 async function createSampleUsers() {
-  try {
-    await User.deleteMany({}); // Limpa usuários existentes
-    
-    const cliente = await User.create({
-      name: 'Cliente Exemplo',
-      email: 'cliente@exemplo.com',
-      password: 'senha123',
-      role: 'cliente'
-    });
+    try {
+        await User.deleteMany({}); // Limpa usuários existentes
+        
+        const cliente = await User.create({
+            name: 'Cliente Exemplo',
+            email: 'cliente@exemplo.com',
+            password: 'senha123',
+            role: 'cliente'
+        });
 
-    const agente = await User.create({
-      name: 'Agente Exemplo',
-      email: 'agente@exemplo.com',
-      password: 'senha123',
-      role: 'agente'
-    });
+        const agente = await User.create({
+            name: 'Agente Exemplo',
+            email: 'agente@exemplo.com',
+            password: 'senha123',
+            role: 'agente'
+        });
 
-    console.log('Usuários de exemplo criados com sucesso');
-    return { cliente: cliente._id, agente: agente._id };
-  } catch (error) {
-    console.error('Erro ao criar usuários de exemplo:', error);
-    throw error;
-  }
+        console.log('Usuários de exemplo criados com sucesso');
+        return { cliente: cliente._id, agente: agente._id };
+    } catch (error) {
+        console.error('Erro ao criar usuários de exemplo:', error);
+        throw error;
+    }
 }
 
 async function seedDatabase() {
-  try {
-    const { cliente, agente } = await createSampleUsers();
+    try {
+        const { cliente, agente } = await createSampleUsers();
 
-    await Property.deleteMany({});
-    console.log('Propriedades existentes removidas');
+        await Property.deleteMany({});
+        console.log('Propriedades existentes removidas');
 
-    const sampleProperties = [
-      {
-        title: "Apartamento Luxuoso no Centro",
-        description: "Lindo apartamento com vista panorâmica da cidade",
-        price: 500000,
-        address: {
-          street: "Rua Principal, 123",
-          city: "São Paulo",
-          state: "SP",
-          zipCode: "01000-000"
-        },
-        bedrooms: 3,
-        bathrooms: 2,
-        area: 120,
-        image: "https://placehold.co/600x400?text=Apartamento+Luxuoso",
-        featured: true,
-        type: "Apartamento",
-        user: cliente,
-        agent: agente
-      },
-      {
-        title: "Casa Espaçosa com Jardim",
-        description: "Casa familiar com amplo jardim e área de lazer",
-        price: 750000,
-        address: {
-          street: "Avenida das Flores, 456",
-          city: "Rio de Janeiro",
-          state: "RJ",
-          zipCode: "20000-000"
-        },
-        bedrooms: 4,
-        bathrooms: 3,
-        area: 200,
-        image: "https://placehold.co/600x400?text=Casa+Espaçosa",
-        featured: true,
-        type: "Casa",
-        user: cliente,
-        agent: agente
-      },
-      {
-        title: "Studio Moderno",
-        description: "Studio compacto e moderno, perfeito para solteiros",
-        price: 300000,
-        address: {
-          street: "Rua da Inovação, 789",
-          city: "Belo Horizonte",
-          state: "MG",
-          zipCode: "30000-000"
-        },
-        bedrooms: 1,
-        bathrooms: 1,
-        area: 45,
-        image: "https://placehold.co/600x400?text=Studio+Moderno",
-        featured: false,
-        type: "Studio",
-        user: cliente,
-        agent: agente
-      }
-    ];
+        const numberOfProperties = 50; // Altere este número para adicionar mais ou menos propriedades
+        const propertiesToInsert = Array(numberOfProperties).fill().map(() => generateRandomProperty(cliente, agente));
 
-    const createdProperties = await Property.insertMany(sampleProperties);
-    console.log(`${createdProperties.length} propriedades inseridas com sucesso`);
+        const createdProperties = await Property.insertMany(propertiesToInsert);
+        console.log(`${createdProperties.length} propriedades inseridas com sucesso`);
 
-  } catch (error) {
-    console.error('Erro ao popular o banco de dados:', error);
-  } finally {
-    mongoose.connection.close();
-  }
+    } catch (error) {
+        console.error('Erro ao popular o banco de dados:', error);
+    } finally {
+        mongoose.connection.close();
+    }
 }
 
 seedDatabase();

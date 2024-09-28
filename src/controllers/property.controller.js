@@ -2,10 +2,14 @@ const Property = require('../models/property.model');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 
-// @desc    Get all properties
+// @desc    Get all properties (with pagination)
 // @route   GET /api/properties
 // @access  Public
 exports.getProperties = asyncHandler(async (req, res, next) => {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const startIndex = (page - 1) * limit;
+
     let query = {};
 
     // Filtro de localização
@@ -36,13 +40,19 @@ exports.getProperties = asyncHandler(async (req, res, next) => {
     }
 
     console.log('Query a ser executada:', query);
-    const properties = await Property.find(query);
+
+    const total = await Property.countDocuments(query);
+    const properties = await Property.find(query).skip(startIndex).limit(limit);
+
     console.log('Propriedades encontradas:', properties);
 
     res.status(200).json({
         success: true,
         count: properties.length,
-        data: properties
+        data: properties,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        total
     });
 });
 
@@ -165,3 +175,16 @@ exports.requestVisit = asyncHandler(async (req, res, next) => {
 
     res.status(200).json({ success: true, data: property });
 });
+
+// Funções auxiliares para paginação
+exports.getPropertiesPaginated = async (skip, limit, query = {}) => {
+    return await Property.find(query)
+        .skip(skip)
+        .limit(limit);
+};
+
+exports.getTotalPropertiesCount = async (query = {}) => {
+    return await Property.countDocuments(query);
+};
+
+// Não é necessário exportar novamente, pois já estamos usando exports.
