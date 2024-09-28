@@ -14,25 +14,35 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   name: { 
     type: String, 
-    required: [true, 'Nome é obrigatório'] 
+    required: [true, 'Por favor, forneça um nome'] 
   },
   email: { 
     type: String, 
-    required: [true, 'E-mail é obrigatório'], 
+    required: [true, 'Por favor, forneça um email'], 
     unique: true,
     lowercase: true,
     trim: true
   },
   password: { 
     type: String, 
-    required: [true, 'Senha é obrigatória'],
-    minlength: 6,
+    required: [true, 'Por favor, forneça uma senha'],
+    minlength: 8,
     select: false
   },
   role: { 
     type: String, 
-    enum: ['cliente', 'agente', 'admin'], // Ajuste conforme necessário
-    required: true
+    enum: ['cliente', 'corretor', 'administrador'],
+    default: 'cliente'
+  },
+  isApproved: { 
+    type: Boolean, 
+    default: function() {
+      return this.role !== 'corretor'; // Aprovação automática para clientes e administradores
+    }
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now
   }
 }, {
   timestamps: true
@@ -60,7 +70,12 @@ userSchema.pre('save', async function(next) {
  * @returns {Promise<boolean>} Verdadeiro se as senhas corresponderem, falso caso contrário.
  */
 userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
-  return await bcrypt.compare(candidatePassword, userPassword);
+  try {
+    return await bcrypt.compare(candidatePassword, userPassword);
+  } catch (error) {
+    console.error('Erro ao comparar senhas');
+    return false;
+  }
 };
 
 const User = mongoose.model('User', userSchema);

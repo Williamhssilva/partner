@@ -9,35 +9,75 @@ dotenv.config();
 
 const app = express();
 
-// Use cors antes de outras middlewares e rotas
-app.use(cors());
+// Adicione isso no início do arquivo, antes de qualquer outra rota ou middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
+// Middleware para logging de todas as requisições
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
+// Configuração do CORS
+app.use(cors({
+  origin: 'http://127.0.0.1:5500', // Ajuste para a origem correta do seu frontend
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Middleware para parsing de JSON
 app.use(express.json());
+
+// Servir arquivos estáticos da pasta frontend
+app.use(express.static(path.join(__dirname, '../../frontend')));
 
 // Conectar ao MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Conectado ao MongoDB'))
   .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-// Rota de teste
+// Adicione isso antes das rotas
+app.use((req, res, next) => {
+    console.log('Configurando timeout para a requisição');
+    res.setTimeout(60000, function(){
+        console.log('Request has timed out.');
+        res.status(408).send('Request Timeout');
+    });
+    next();
+});
+
+// Rotas
 app.get('/', (req, res) => {
   res.json({ message: 'Bem-vindo ao sistema de parceria de corretores de imóveis!' });
 });
 
-// Incluir rotas de autenticação
 const authRoutes = require('./routes/auth.routes');
-app.use('/api/auth', authRoutes);
+app.use('/api/users', authRoutes);
 
-// Incluir rotas para imóveis
 const propertyRoutes = require('./routes/property.routes');
 app.use('/api/properties', propertyRoutes);
 
-// Adicione esta linha após a declaração de authRoutes
-app.use('/api/users', authRoutes);
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Teste bem-sucedido' });
+});
 
-// Servir arquivos estáticos da pasta public
-app.use(express.static(path.join(__dirname, '../public')));
+// Middleware de tratamento de erros
+app.use((err, req, res, next) => {
+  console.error('Erro no servidor:', err);
+  res.status(500).send('Algo deu errado!');
+});
+
+// Adicione isso no final do arquivo, antes de exportar o app
+app.use((err, req, res, next) => {
+    console.error('Erro global:', err);
+    res.status(500).json({
+        status: 'error',
+        message: 'Algo deu errado no servidor'
+    });
+});
 
 // Iniciar o servidor
 const PORT = process.env.PORT || 5000;

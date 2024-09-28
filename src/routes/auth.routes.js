@@ -1,11 +1,20 @@
 const express = require('express');
 const authController = require('../controllers/auth.controller');
-const { protect } = require('../middleware/auth.middleware');
-
 const router = express.Router();
 
-router.post('/signup', authController.signup);
+// Rota de registro
+router.post('/register', authController.signup);
+
+// Rota de login
 router.post('/login', authController.login);
-router.get('/me', protect, authController.getMe); // Nova rota protegida
+
+// Rota para obter o perfil do usuário atual
+router.get('/me', authController.protect, authController.getMe);
+
+// Rota para aprovar um agente (corretor)
+router.patch('/approve-agent/:id', authController.approveAgentNoAuth);
+
+// Rota para obter corretores pendentes
+router.get('/pending-agents', authController.getPendingAgents);
 
 module.exports = router;
