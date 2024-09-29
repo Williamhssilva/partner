@@ -69,20 +69,22 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.createProperty = async (req, res) => {
     try {
-        const newProperty = await Property.create({
-            ...req.body,
-            agent: req.user._id // Assumindo que o usuário autenticado é o agente
-        });
+        const propertyData = req.body;
+        
+        // Certifique-se de que images é um array
+        if (!Array.isArray(propertyData.images)) {
+            propertyData.images = propertyData.images ? [propertyData.images] : [];
+        }
 
+        const property = await Property.create(propertyData);
+        
         res.status(201).json({
-            status: 'success',
-            data: {
-                property: newProperty
-            }
+            success: true,
+            data: property
         });
     } catch (error) {
         res.status(400).json({
-            status: 'fail',
+            success: false,
             message: error.message
         });
     }
@@ -314,6 +316,39 @@ exports.getAgentDashboard = async (req, res) => {
         res.status(500).json({
             status: 'error',
             message: 'Erro ao carregar o dashboard do corretor'
+        });
+    }
+};
+
+// Adicione esta função no final do arquivo
+exports.getSimilarProperties = async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id);
+        if (!property) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Propriedade não encontrada'
+            });
+        }
+
+        const similarProperties = await Property.find({
+            _id: { $ne: property._id },
+            type: property.type,
+            price: { $gte: property.price * 0.8, $lte: property.price * 1.2 },
+            bedrooms: { $gte: property.bedrooms - 1, $lte: property.bedrooms + 1 }
+        })
+        .limit(4);
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                similarProperties
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
         });
     }
 };

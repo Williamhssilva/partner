@@ -30,4 +30,7 @@ router.get('/', propertyController.getProperties);
 // Nova rota para o dashboard do corretor
 router.get('/agent/dashboard', protect, propertyController.getAgentDashboard);
 
+// Adicione esta linha junto com as outras rotas
+router.get('/:id/similar', propertyController.getSimilarProperties);
+
 module.exports = router;
