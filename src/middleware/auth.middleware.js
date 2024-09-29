@@ -51,3 +51,18 @@ exports.protect = async (req, res, next) => {
         res.status(500).json({ message: 'Server error in authentication' });
     }
 };
+
+exports.authorize = (...roles) => {
+    return (req, res, next) => {
+        if (req.user.role === 'administrador') {
+            return next(); // Administrador tem acesso a tudo
+        }
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Você não tem permissão para acessar esta rota'
+            });
+        }
+        next();
+    };
+};

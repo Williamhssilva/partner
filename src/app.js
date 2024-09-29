@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const Property = require('./models/property.model'); // Adicione esta linha
+const leadRoutes = require('./routes/lead.routes');
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -25,7 +26,7 @@ app.use((req, res, next) => {
 // Configuração do CORS
 app.use(cors({
   origin: 'http://127.0.0.1:5500', // Ajuste para a origem correta do seu frontend
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -82,6 +83,9 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Teste bem-sucedido' });
 });
 
+// Use as rotas de leads
+app.use('/api/leads', leadRoutes);
+
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('Erro no servidor:', err);
@@ -95,6 +99,15 @@ app.use((err, req, res, next) => {
         status: 'error',
         message: 'Algo deu errado no servidor'
     });
+});
+
+// Adicione isso após todas as suas rotas
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    error: 'Algo deu errado no servidor'
+  });
 });
 
 // Iniciar o servidor

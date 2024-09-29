@@ -254,23 +254,47 @@ exports.getAgentDashboard = async (req, res) => {
             });
         }
 
-        // Busca as 5 propriedades mais recentes de toda a plataforma
-        const recentProperties = await Property.find()
+        const agentId = req.user._id;
+
+        // Estatísticas básicas
+        const totalProperties = await Property.countDocuments({ agent: agentId });
+        const activeProperties = await Property.countDocuments({ agent: agentId, status: 'disponível' });
+        const soldProperties = await Property.countDocuments({ agent: agentId, status: 'vendido' });
+
+        // Propriedades recentes
+        const recentProperties = await Property.find({ agent: agentId })
             .sort({ createdAt: -1 })
-            .limit(5)
-            .populate('agent', 'name'); // Popula o nome do agente para exibição
+            .limit(5);
 
-        // Estatísticas específicas do corretor logado
-        const totalProperties = await Property.countDocuments({ agent: req.user._id });
-        const activeProperties = await Property.countDocuments({ agent: req.user._id, status: 'disponível' });
-        const soldProperties = await Property.countDocuments({ agent: req.user._id, status: 'vendido' });
+        // Total de visualizações de todas as propriedades do corretor
+        const totalViews = await Property.aggregate([
+            { $match: { agent: agentId } },
+            { $group: { _id: null, totalViews: { $sum: "$views" } } }
+        ]);
 
-        console.log('Dados do dashboard:', { 
-            totalProperties, 
-            activeProperties, 
-            soldProperties, 
-            recentProperties 
-        });
+        // Média de preço das propriedades ativas
+        const averagePrice = await Property.aggregate([
+            { $match: { agent: agentId, status: 'disponível' } },
+            { $group: { _id: null, avgPrice: { $avg: "$price" } } }
+        ]);
+
+        // Contagem de propriedades por tipo
+        const propertiesByType = await Property.aggregate([
+            { $match: { agent: agentId } },
+            { $group: { _id: "$type", count: { $sum: 1 } } }
+        ]);
+
+        // Dados para gráfico de tendência de preços (últimos 6 meses)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const priceTrend = await Property.aggregate([
+            { $match: { agent: agentId, createdAt: { $gte: sixMonthsAgo } } },
+            { $group: {
+                _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                avgPrice: { $avg: "$price" }
+            }},
+            { $sort: { _id: 1 } }
+        ]);
 
         res.status(200).json({
             status: 'success',
@@ -278,7 +302,11 @@ exports.getAgentDashboard = async (req, res) => {
                 totalProperties,
                 activeProperties,
                 soldProperties,
-                recentProperties
+                recentProperties,
+                totalViews: totalViews[0]?.totalViews || 0,
+                averagePrice: averagePrice[0]?.avgPrice || 0,
+                propertiesByType,
+                priceTrend
             }
         });
     } catch (error) {
