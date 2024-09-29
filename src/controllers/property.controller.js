@@ -1,6 +1,8 @@
 const Property = require('../models/property.model');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
+const path = require('path');
+const fs = require('fs');
 
 // @desc    Get all properties (with pagination)
 // @route   GET /api/properties
@@ -67,28 +69,45 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @desc    Create new property
 // @route   POST /api/properties
 // @access  Private
-exports.createProperty = async (req, res) => {
-    try {
-        const propertyData = req.body;
-        
-        // Certifique-se de que images é um array
-        if (!Array.isArray(propertyData.images)) {
-            propertyData.images = propertyData.images ? [propertyData.images] : [];
-        }
+exports.createProperty = asyncHandler(async (req, res) => {
+    console.log('Iniciando criação de propriedade');
+    console.log('Dados recebidos:', req.body);
+    console.log('Arquivos recebidos:', req.files);
 
+    const propertyData = {
+        ...req.body,
+        agent: req.user.id,
+        address: {
+            street: req.body.address,
+            city: req.body.city,
+            state: req.body.state,
+            zipCode: req.body.zipCode
+        }
+    };
+
+    // Handle multiple image uploads
+    if (req.files && req.files.length > 0) {
+        propertyData.images = req.files.map(file => `/uploads/${file.filename}`);
+        console.log('Imagens processadas:', propertyData.images);
+    }
+
+    try {
+        console.log('Tentando criar propriedade no banco de dados');
         const property = await Property.create(propertyData);
-        
+        console.log('Propriedade criada com sucesso:', property);
+
         res.status(201).json({
             success: true,
             data: property
         });
     } catch (error) {
+        console.error('Erro ao criar propriedade:', error);
         res.status(400).json({
             success: false,
             message: error.message
         });
     }
-};
+});
 
 // @desc    Update property
 // @route   PUT /api/properties/:id

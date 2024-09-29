@@ -139,4 +139,7 @@ app.get('/api/dbtest', async (req, res) => {
   }
 });
 
+// Servir arquivos estáticos da pasta uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 module.exports = app;
