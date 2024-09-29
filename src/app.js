@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const Property = require('./models/property.model'); // Adicione esta linha
 const leadRoutes = require('./routes/lead.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -85,6 +86,8 @@ app.get('/api/test', (req, res) => {
 
 // Use as rotas de leads
 app.use('/api/leads', leadRoutes);
+
+app.use('/api/admin', adminRoutes);
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
