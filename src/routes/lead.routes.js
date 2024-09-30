@@ -4,22 +4,27 @@ const {
     getLead,
     createLead,
     updateLead,
-    deleteLead
+    deleteLead,
+    updateLeadStage // Adicionamos esta nova função
 } = require('../controllers/lead.controller');
 
-const { protect } = require('../middleware/auth.middleware');
+const { protect, authorize } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect); // Todas as rotas de lead requerem autenticação
 
 router.route('/')
-    .get(getLeads)
-    .post(createLead);
+    .get(authorize('corretor', 'administrador'), getLeads)
+    .post(authorize('corretor', 'administrador'), createLead);
 
 router.route('/:id')
-    .get(getLead)
-    .put(updateLead)
-    .delete(deleteLead);
+    .get(authorize('corretor', 'administrador'), getLead)
+    .put(authorize('corretor', 'administrador'), updateLead)
+    .delete(authorize('corretor', 'administrador'), deleteLead);
+
+// Nova rota para atualizar o estágio do lead
+router.route('/:id/stage')
+    .put(authorize('corretor', 'administrador'), updateLeadStage);
 
 module.exports = router;
