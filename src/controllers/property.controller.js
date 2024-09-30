@@ -3,6 +3,7 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 
 // @desc    Get all properties (with pagination)
 // @route   GET /api/properties
@@ -136,11 +137,14 @@ exports.createProperty = asyncHandler(async (req, res) => {
 // @route   PUT /api/properties/:id
 // @access  Private
 exports.updateProperty = async (req, res) => {
+    console.log('Iniciando updateProperty');
+    console.log('ID da propriedade:', req.params.id);
+    console.log('Corpo da requisição:', req.body);
+    console.log('Arquivos recebidos:', req.files);
+
     try {
-        const property = await Property.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true
-        });
+        const updates = req.body;
+        const property = await Property.findById(req.params.id);
 
         if (!property) {
             return res.status(404).json({
@@ -149,6 +153,36 @@ exports.updateProperty = async (req, res) => {
             });
         }
 
+        // Processar imagens a serem removidas
+        if (updates.imagesToRemove) {
+            const imagesToRemove = JSON.parse(updates.imagesToRemove);
+            property.images = property.images.filter(img => !imagesToRemove.includes(img));
+            
+            // Remover arquivos físicos
+            imagesToRemove.forEach(img => {
+                const filePath = path.join(__dirname, '..', '..', 'uploads', img);
+                fs.unlink(filePath, (err) => {
+                    if (err) console.error(`Erro ao excluir arquivo: ${err}`);
+                });
+            });
+        }
+
+        // Adicionar novas imagens
+        if (req.files && req.files.length > 0) {
+            const newImagePaths = req.files.map(file => file.filename);
+            property.images = [...property.images, ...newImagePaths];
+        }
+
+        // Atualizar outros campos
+        Object.keys(updates).forEach(key => {
+            if (key !== 'imagesToRemove' && key !== 'images') {
+                property[key] = updates[key];
+            }
+        });
+
+        await property.save();
+
+        console.log('Propriedade atualizada com sucesso:', property);
         res.status(200).json({
             status: 'success',
             data: {
@@ -156,6 +190,7 @@ exports.updateProperty = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('Erro ao atualizar propriedade:', error);
         res.status(400).json({
             status: 'fail',
             message: error.message

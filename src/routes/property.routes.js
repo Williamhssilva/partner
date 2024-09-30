@@ -26,7 +26,7 @@ router.route('/')
 
 router.route('/:id')
   .get(propertyController.getProperty)
-  .patch(protect, propertyController.updateProperty)
+  .patch(protect, upload.array('images', 10), propertyController.updateProperty)
   .delete(protect, propertyController.deleteProperty);
 
 // Rotas adicionais
@@ -43,7 +43,9 @@ router.get('/', propertyController.getProperties);
 // Nova rota para o dashboard do corretor
 router.get('/agent/dashboard', protect, propertyController.getAgentDashboard);
 
-// Adicione esta linha junto com as outras rotas
+// rota para similar properties 
 router.get('/:id/similar', propertyController.getSimilarProperties);
+// rota para atualizar propriedade
+router.put('/properties/:id', protect, propertyController.updateProperty);
 
 module.exports = router;
