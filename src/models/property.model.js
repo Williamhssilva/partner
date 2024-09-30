@@ -15,8 +15,13 @@ const propertySchema = new mongoose.Schema({
     state: { type: String, required: true },
     zipCode: { type: String, required: true }
   },
-  agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true } // Mudado de 'user' para 'agent'
+  agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Mudado de 'user' para 'agent'
   // ... outros campos ...
+  status: { 
+    type: String, 
+    enum: ['ativo', 'inativo', 'vendido'], 
+    default: 'ativo' 
+  },
 }, {
   timestamps: true
 });
