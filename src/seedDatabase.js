@@ -19,64 +19,84 @@ const randomPrice = () => randomInt(100000, 1000000);
 const cities = ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Salvador', 'Brasília', 'Curitiba', 'Fortaleza', 'Recife', 'Porto Alegre', 'Manaus'];
 
 // Array de tipos de propriedades
-const propertyTypes = ['Apartamento', 'Casa', 'Studio', 'Cobertura', 'Sobrado', 'Kitnet'];
+const propertyTypes = ['Casa', 'Apartamento', 'Lote', 'Comercial'];
+
+// Array de tipos secundários
+const secondaryTypes = ['Individual', 'Geminada', 'Sobrado', 'Condomínio'];
 
 // Função para gerar uma propriedade aleatória
-const generateRandomProperty = (clienteId, agenteId) => ({
+const generateRandomProperty = (corretorId) => ({
     title: `${propertyTypes[randomInt(0, propertyTypes.length - 1)]} em ${cities[randomInt(0, cities.length - 1)]}`,
-    description: `Uma ${propertyTypes[randomInt(0, propertyTypes.length - 1)]} incrível com localização privilegiada.`,
-    price: randomPrice(),
-    address: {
-        street: `Rua ${randomInt(1, 100)}`,
-        city: cities[randomInt(0, cities.length - 1)],
-        state: 'Estado',
-        zipCode: `${randomInt(10000, 99999)}-${randomInt(100, 999)}`
-    },
+    description: `Uma propriedade incrível com localização privilegiada.`,
+    capturedBy: corretorId,
+    captureDate: new Date(),
+    captureCity: cities[randomInt(0, cities.length - 1)],
+    captureCEP: `${randomInt(10000, 99999)}-${randomInt(100, 999)}`,
+    address: `Rua ${randomInt(1, 100)}`,
+    neighborhood: `Bairro ${randomInt(1, 20)}`,
+    isCondominium: Math.random() < 0.5,
+    block: `${randomInt(1, 10)}`,
+    apartmentNumber: `${randomInt(101, 1001)}`,
+    propertyType: propertyTypes[randomInt(0, propertyTypes.length - 1)],
+    secondaryType: secondaryTypes[randomInt(0, secondaryTypes.length - 1)],
+    totalArea: randomInt(50, 500),
+    builtArea: randomInt(30, 400),
     bedrooms: randomInt(1, 5),
-    bathrooms: randomInt(1, 4),
-    area: randomInt(30, 300),
-    image: `https://placehold.co/600x400?text=${encodeURIComponent(propertyTypes[randomInt(0, propertyTypes.length - 1)])}`,
+    suites: randomInt(0, 3),
+    socialBathrooms: randomInt(1, 3),
+    hasBackyard: Math.random() < 0.5,
+    hasBalcony: Math.random() < 0.5,
+    hasElevator: Math.random() < 0.3,
+    floors: randomInt(1, 3),
+    floor: randomInt(1, 20),
+    occupancyStatus: ['Ocupado', 'Desocupado', 'Inquilino'][randomInt(0, 2)],
+    keyLocation: `Local ${randomInt(1, 5)}`,
+    ownerName: `Proprietário ${randomInt(1, 100)}`,
+    ownerContact: `(${randomInt(11, 99)}) 9${randomInt(1000, 9999)}-${randomInt(1000, 9999)}`,
+    salePrice: randomPrice(),
+    desiredNetPrice: randomPrice(),
+    exclusivityContract: {
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 dias a partir de hoje
+        hasPromotion: Math.random() < 0.3
+    },
+    differentials: 'Diferenciais da propriedade',
+    landmarks: 'Pontos de referência próximos',
+    generalObservations: 'Observações gerais sobre a propriedade',
+    images: [`https://placehold.co/600x400?text=${encodeURIComponent(propertyTypes[randomInt(0, propertyTypes.length - 1)])}`],
     featured: Math.random() < 0.2, // 20% de chance de ser destaque
-    type: propertyTypes[randomInt(0, propertyTypes.length - 1)],
-    user: clienteId,
-    agent: agenteId
+    status: ['disponível', 'vendido', 'alugado'][randomInt(0, 2)],
+    views: randomInt(0, 1000),
 });
 
 async function createSampleUsers() {
     try {
         await User.deleteMany({}); // Limpa usuários existentes
         
-        const cliente = await User.create({
-            name: 'Cliente Exemplo',
-            email: 'cliente@exemplo.com',
+        const corretor = await User.create({
+            name: 'Corretor Exemplo',
+            email: 'corretor@exemplo.com',
             password: 'senha123',
-            role: 'cliente'
+            role: 'corretor'
         });
 
-        const agente = await User.create({
-            name: 'Agente Exemplo',
-            email: 'agente@exemplo.com',
-            password: 'senha123',
-            role: 'agente'
-        });
-
-        console.log('Usuários de exemplo criados com sucesso');
-        return { cliente: cliente._id, agente: agente._id };
+        console.log('Usuário corretor de exemplo criado com sucesso');
+        return { corretor: corretor._id };
     } catch (error) {
-        console.error('Erro ao criar usuários de exemplo:', error);
+        console.error('Erro ao criar usuário corretor de exemplo:', error);
         throw error;
     }
 }
 
 async function seedDatabase() {
     try {
-        const { cliente, agente } = await createSampleUsers();
+        const { corretor } = await createSampleUsers();
 
         await Property.deleteMany({});
         console.log('Propriedades existentes removidas');
 
         const numberOfProperties = 50; // Altere este número para adicionar mais ou menos propriedades
-        const propertiesToInsert = Array(numberOfProperties).fill().map(() => generateRandomProperty(cliente, agente));
+        const propertiesToInsert = Array(numberOfProperties).fill().map(() => generateRandomProperty(corretor));
 
         const createdProperties = await Property.insertMany(propertiesToInsert);
         console.log(`${createdProperties.length} propriedades inseridas com sucesso`);

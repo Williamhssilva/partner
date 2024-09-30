@@ -6,6 +6,7 @@ const path = require('path');
 const Property = require('./models/property.model'); // Adicione esta linha
 const leadRoutes = require('./routes/lead.routes');
 const adminRoutes = require('./routes/admin.routes');
+const errorHandler = require('./middleware/error');
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -141,5 +142,8 @@ app.get('/api/dbtest', async (req, res) => {
 
 // Servir arquivos estáticos da pasta uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Adicione o middleware de tratamento de erros
+app.use(errorHandler);
 
 module.exports = app;
