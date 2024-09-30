@@ -13,7 +13,7 @@ Este é o backend do sistema Parcero Imóveis, fornecendo uma API RESTful para o
 1. Clone o repositório:
    ```
    git clone https://github.com/seu-usuario/partner.git
-   cd parcero-backend
+   cd partner
    ```
 
 2. Instale as dependências:
