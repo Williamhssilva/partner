@@ -1,4 +1,4 @@
-const API_URL = 'https://immediate-zesty-place.glitch.me/api';
+const API_URL = 'https://immediate-zesty-place.glitch.me';
 
 async function signup() {
     const name = document.getElementById('signupName').value;
