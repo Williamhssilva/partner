@@ -143,56 +143,39 @@ exports.updateProperty = async (req, res) => {
     console.log('Arquivos recebidos:', req.files);
 
     try {
-        const updates = req.body;
-        const property = await Property.findById(req.params.id);
+        const { id } = req.params;
+        const updateData = req.body;
+        const existingImages = updateData.existingImages || [];
+        const imagesToDelete = updateData.imagesToDelete || [];
 
-        if (!property) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'Propriedade não encontrada'
-            });
-        }
+        // Remove as imagens marcadas para deleção
+        updateData.images = existingImages.filter(img => !imagesToDelete.includes(img));
 
-        // Processar imagens a serem removidas
-        if (updates.imagesToRemove) {
-            const imagesToRemove = JSON.parse(updates.imagesToRemove);
-            property.images = property.images.filter(img => !imagesToRemove.includes(img));
-            
-            // Remover arquivos físicos
-            imagesToRemove.forEach(img => {
-                const filePath = path.join(__dirname, '..', '..', 'uploads', img);
-                fs.unlink(filePath, (err) => {
-                    if (err) console.error(`Erro ao excluir arquivo: ${err}`);
-                });
-            });
-        }
-
-        // Adicionar novas imagens
+        // Adiciona novas imagens, se houver
         if (req.files && req.files.length > 0) {
-            const newImagePaths = req.files.map(file => file.filename);
-            property.images = [...property.images, ...newImagePaths];
+            const newImagePaths = req.files.map(file => file.path);
+            updateData.images = [...updateData.images, ...newImagePaths];
         }
 
-        // Atualizar outros campos
-        Object.keys(updates).forEach(key => {
-            if (key !== 'imagesToRemove' && key !== 'images') {
-                property[key] = updates[key];
-            }
+        // Atualiza a propriedade no banco de dados
+        const updatedProperty = await Property.findByIdAndUpdate(id, updateData, { new: true });
+
+        // Deleta os arquivos de imagem marcados para deleção
+        imagesToDelete.forEach(imagePath => {
+            fs.unlink(path.join(__dirname, '..', '..', imagePath), (err) => {
+                if (err) console.error('Erro ao deletar imagem:', err);
+            });
         });
 
-        await property.save();
-
-        console.log('Propriedade atualizada com sucesso:', property);
         res.status(200).json({
             status: 'success',
             data: {
-                property
+                property: updatedProperty
             }
         });
     } catch (error) {
-        console.error('Erro ao atualizar propriedade:', error);
         res.status(400).json({
-            status: 'fail',
+            status: 'error',
             message: error.message
         });
     }

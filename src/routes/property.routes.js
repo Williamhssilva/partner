@@ -22,7 +22,7 @@ const upload = multer({ storage: storage });
 // Rotas públicas
 router.route('/')
   .get(propertyController.getProperties)
-  .post(protect, authorize('corretor', 'administrador'), upload.array('images', 5), propertyController.createProperty);
+  .post(protect, authorize('corretor', 'administrador'), upload.array('images', 10), propertyController.createProperty);
 
 router.route('/:id')
   .get(propertyController.getProperty)
