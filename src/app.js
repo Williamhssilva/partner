@@ -15,23 +15,23 @@ const app = express();
 
 // Adicione isso no início do arquivo, antes de qualquer outra rota ou middleware
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
 // Middleware para logging de todas as requisições
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
 });
 
 // Configuração do CORS
-//app.use(cors({
-//  origin: ['https://williamhssilva.github.io', 'http://127.0.0.1:5500'], // Ajuste para a origem correta do seu frontend
-//  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-//  allowedHeaders: ['Content-Type', 'Authorization']
-//}));
-app.use(cors());
+app.use(cors({
+  origin: ['https://williamhssilva.github.io', 'http://127.0.0.1:5500'], // Ajuste para a origem correta do seu frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 
 // Middleware para parsing de JSON
 app.use(express.json({ limit: '10mb' }));
@@ -42,33 +42,33 @@ app.use(express.static(path.join(__dirname, '../../frontend')));
 
 // Conectar ao MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000
+  serverSelectionTimeoutMS: 5000
 })
-.then(() => {
+  .then(() => {
     console.log('Conectado ao MongoDB');
     console.log('URI de conexão:', process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@')); // Oculta as credenciais
-})
-.catch(err => {
+  })
+  .catch(err => {
     console.error('Erro detalhado ao conectar ao MongoDB:', err);
     process.exit(1);
-});
+  });
 
 mongoose.connection.on('error', err => {
-    console.error('Erro na conexão com o MongoDB:', err);
+  console.error('Erro na conexão com o MongoDB:', err);
 });
 
 mongoose.connection.on('disconnected', () => {
-    console.log('Desconectado do MongoDB');
+  console.log('Desconectado do MongoDB');
 });
 
 // Adicione isso antes das rotas
 app.use((req, res, next) => {
-    console.log('Configurando timeout para a requisição');
-    res.setTimeout(60000, function(){
-        console.log('Request has timed out.');
-        res.status(408).send('Request Timeout');
-    });
-    next();
+  console.log('Configurando timeout para a requisição');
+  res.setTimeout(60000, function () {
+    console.log('Request has timed out.');
+    res.status(408).send('Request Timeout');
+  });
+  next();
 });
 
 // Rotas
@@ -99,11 +99,11 @@ app.use((err, req, res, next) => {
 
 // Adicione isso no final do arquivo, antes de exportar o app
 app.use((err, req, res, next) => {
-    console.error('Erro global:', err);
-    res.status(500).json({
-        status: 'error',
-        message: 'Algo deu errado no servidor'
-    });
+  console.error('Erro global:', err);
+  res.status(500).json({
+    status: 'error',
+    message: 'Algo deu errado no servidor'
+  });
 });
 
 // Adicione isso após todas as suas rotas
@@ -127,14 +127,14 @@ app.get('/api/dbtest', async (req, res) => {
     const startTime = Date.now();
     const count = await Property.countDocuments();
     const endTime = Date.now();
-    res.json({ 
+    res.json({
       message: 'Teste de banco de dados bem-sucedido',
       count: count,
       time: `${endTime - startTime}ms`
     });
   } catch (error) {
     console.error('Erro no teste de banco de dados:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Erro no teste de banco de dados',
       error: error.message
     });
