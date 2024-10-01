@@ -26,11 +26,12 @@ app.use((req, res, next) => {
 });
 
 // Configuração do CORS
-app.use(cors({
-  origin: 'https://williamhssilva.github.io', // Ajuste para a origem correta do seu frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+//app.use(cors({
+//  origin: ['https://williamhssilva.github.io', 'http://127.0.0.1:5500'], // Ajuste para a origem correta do seu frontend
+//  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+//  allowedHeaders: ['Content-Type', 'Authorization']
+//}));
+app.use(cors());
 
 // Middleware para parsing de JSON
 app.use(express.json({ limit: '10mb' }));
