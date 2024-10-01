@@ -158,3 +158,29 @@ exports.deleteLead = asyncHandler(async (req, res, next) => {
         });
     }
 });
+
+// @desc    Update lead stage
+// @route   PUT /api/v1/leads/:id/stage
+// @access  Private
+exports.updateLeadStage = asyncHandler(async (req, res, next) => {
+    const { stage } = req.body;
+
+    if (!stage) {
+        return next(new ErrorResponse('Por favor, forneça um estágio válido', 400));
+    }
+
+    const lead = await Lead.findByIdAndUpdate(
+        req.params.id,
+        { stage },
+        { new: true, runValidators: true }
+    );
+
+    if (!lead) {
+        return next(new ErrorResponse(`Lead não encontrado com id ${req.params.id}`, 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        data: lead
+    });
+});

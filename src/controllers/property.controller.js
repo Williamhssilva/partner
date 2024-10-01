@@ -3,26 +3,34 @@ const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 
 // @desc    Get all properties (with pagination)
 // @route   GET /api/properties
 // @access  Public
 exports.getProperties = async (req, res) => {
     try {
-        const { page = 1, limit = 10, maxPrice, bedrooms, featured } = req.query;
-        
+        const { page = 1, limit = 10, maxPrice, minPrice, bedrooms, propertyType, neighborhood, captureCity } = req.query;
+
         const query = {};
-        
+
         if (maxPrice) {
-            query.price = { $lte: parseFloat(maxPrice) };
+            query.salePrice = { ...query.salePrice, $lte: parseFloat(maxPrice) };
         }
-        
+        if (minPrice) {
+            query.salePrice = { ...query.salePrice, $gte: parseFloat(minPrice) };
+        }
         if (bedrooms) {
             query.bedrooms = { $gte: parseInt(bedrooms) };
         }
-        
-        if (featured === 'true') {
-            query.featured = true;
+        if (propertyType) {
+            query.propertyType = propertyType;
+        }
+        if (neighborhood) {
+            query.neighborhood = neighborhood;
+        }
+        if (captureCity) {
+            query.captureCity = captureCity;
         }
 
         console.log('Query final:', query);
@@ -46,9 +54,9 @@ exports.getProperties = async (req, res) => {
 
     } catch (error) {
         console.error('Erro ao buscar propriedades:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             status: 'error',
-            message: 'Erro interno do servidor ao buscar propriedades' 
+            message: 'Erro interno do servidor ao buscar propriedades'
         });
     }
 };
@@ -76,13 +84,28 @@ exports.createProperty = asyncHandler(async (req, res) => {
 
     const propertyData = {
         ...req.body,
-        agent: req.user.id,
-        address: {
-            street: req.body.address,
-            city: req.body.city,
-            state: req.body.state,
-            zipCode: req.body.zipCode
-        }
+        capturedBy: req.user.id,
+        isCondominium: req.body.isCondominium === 'true',
+        hasBackyard: req.body.hasBackyard === 'true',
+        hasBalcony: req.body.hasBalcony === 'true',
+        hasElevator: req.body.hasElevator === 'true',
+        totalArea: parseFloat(req.body.totalArea),
+        builtArea: parseFloat(req.body.builtArea),
+        bedrooms: parseInt(req.body.bedrooms),
+        suites: parseInt(req.body.suites),
+        socialBathrooms: parseInt(req.body.socialBathrooms),
+        floors: parseInt(req.body.floors),
+        floor: parseInt(req.body.floor),
+        salePrice: parseFloat(req.body.salePrice) || 0, // Garante que salePrice seja um número
+        desiredNetPrice: parseFloat(req.body.desiredNetPrice),
+        exclusivityContract: {
+            startDate: req.body.exclusivityStartDate,
+            endDate: req.body.exclusivityEndDate,
+            hasPromotion: req.body.hasPromotion === 'true'
+        },
+        // Adicione estes campos que estão faltando
+        title: req.body.title || `Propriedade em ${req.body.neighborhood || 'localização desconhecida'}`,
+        description: req.body.description || `${req.body.propertyType || 'Propriedade'} em ${req.body.neighborhood || 'localização desconhecida'}`
     };
 
     // Handle multiple image uploads
@@ -104,7 +127,8 @@ exports.createProperty = asyncHandler(async (req, res) => {
         console.error('Erro ao criar propriedade:', error);
         res.status(400).json({
             success: false,
-            message: error.message
+            message: error.message,
+            details: error.errors ? Object.values(error.errors).map(err => err.message) : []
         });
     }
 });
@@ -113,28 +137,45 @@ exports.createProperty = asyncHandler(async (req, res) => {
 // @route   PUT /api/properties/:id
 // @access  Private
 exports.updateProperty = async (req, res) => {
-    try {
-        const property = await Property.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true
-        });
+    console.log('Iniciando updateProperty');
+    console.log('ID da propriedade:', req.params.id);
+    console.log('Corpo da requisição:', req.body);
+    console.log('Arquivos recebidos:', req.files);
 
-        if (!property) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'Propriedade não encontrada'
-            });
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const existingImages = updateData.existingImages || [];
+        const imagesToDelete = updateData.imagesToDelete || [];
+
+        // Remove as imagens marcadas para deleção
+        updateData.images = existingImages.filter(img => !imagesToDelete.includes(img));
+
+        // Adiciona novas imagens, se houver
+        if (req.files && req.files.length > 0) {
+            const newImagePaths = req.files.map(file => file.path);
+            updateData.images = [...updateData.images, ...newImagePaths];
         }
+
+        // Atualiza a propriedade no banco de dados
+        const updatedProperty = await Property.findByIdAndUpdate(id, updateData, { new: true });
+
+        // Deleta os arquivos de imagem marcados para deleção
+        imagesToDelete.forEach(imagePath => {
+            fs.unlink(path.join(__dirname, '..', '..', imagePath), (err) => {
+                if (err) console.error('Erro ao deletar imagem:', err);
+            });
+        });
 
         res.status(200).json({
             status: 'success',
             data: {
-                property
+                property: updatedProperty
             }
         });
     } catch (error) {
         res.status(400).json({
-            status: 'fail',
+            status: 'error',
             message: error.message
         });
     }
@@ -143,28 +184,46 @@ exports.updateProperty = async (req, res) => {
 // @desc    Delete property
 // @route   DELETE /api/properties/:id
 // @access  Private
-exports.deleteProperty = async (req, res) => {
+exports.deleteProperty = asyncHandler(async (req, res, next) => {
+    console.log('Iniciando deleteProperty');
+    console.log('ID da propriedade:', req.params.id);
+    console.log('Usuário atual:', req.user);
+
     try {
-        const property = await Property.findByIdAndDelete(req.params.id);
+        const property = await Property.findById(req.params.id);
 
         if (!property) {
-            return res.status(404).json({
-                status: 'fail',
-                message: 'Propriedade não encontrada'
-            });
+            console.log('Propriedade não encontrada');
+            return next(new ErrorResponse(`Propriedade não encontrada com id ${req.params.id}`, 404));
         }
 
-        res.status(204).json({
-            status: 'success',
-            data: null
+        console.log('Propriedade encontrada:', property);
+
+        // Verificar se o usuário tem permissão para excluir a propriedade
+        if (property.capturedBy.toString() !== req.user.id && req.user.role !== 'administrador') {
+            console.log('Usuário não tem permissão para excluir esta propriedade');
+            return next(new ErrorResponse(`Usuário não tem permissão para excluir esta propriedade`, 403));
+        }
+
+        // Usar deleteOne() em vez de remove()
+        const result = await Property.deleteOne({ _id: req.params.id });
+
+        if (result.deletedCount === 0) {
+            console.log('Propriedade não foi excluída');
+            return next(new ErrorResponse(`Falha ao excluir a propriedade`, 500));
+        }
+
+        console.log('Propriedade excluída com sucesso');
+
+        res.status(200).json({
+            success: true,
+            data: {}
         });
     } catch (error) {
-        res.status(400).json({
-            status: 'fail',
-            message: error.message
-        });
+        console.error('Erro ao excluir propriedade:', error);
+        next(error);
     }
-};
+});
 
 // @desc    Toggle favorite property
 // @route   POST /api/properties/:id/favorite
@@ -310,10 +369,12 @@ exports.getAgentDashboard = async (req, res) => {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         const priceTrend = await Property.aggregate([
             { $match: { agent: agentId, createdAt: { $gte: sixMonthsAgo } } },
-            { $group: {
-                _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                avgPrice: { $avg: "$price" }
-            }},
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                    avgPrice: { $avg: "$price" }
+                }
+            },
             { $sort: { _id: 1 } }
         ]);
 
@@ -356,7 +417,7 @@ exports.getSimilarProperties = async (req, res) => {
             price: { $gte: property.price * 0.8, $lte: property.price * 1.2 },
             bedrooms: { $gte: property.bedrooms - 1, $lte: property.bedrooms + 1 }
         })
-        .limit(4);
+            .limit(4);
 
         res.status(200).json({
             status: 'success',
