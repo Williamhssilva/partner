@@ -7,6 +7,7 @@ const Property = require('./models/property.model'); // Adicione esta linha
 const leadRoutes = require('./routes/lead.routes');
 const adminRoutes = require('./routes/admin.routes');
 const errorHandler = require('./middleware/error');
+const fs = require('fs');
 
 // Carrega as variáveis de ambiente
 dotenv.config();
