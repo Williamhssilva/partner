@@ -7,8 +7,9 @@ const User = require('../models/user.model');
  * @returns {string} Token JWT.
  */
 const signToken = (id) => {
+  console.log('Criando token com expiração:', process.env.JWT_EXPIRES);
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES
+    expiresIn: process.env.JWT_EXPIRES || '1d'
   });
 };
 

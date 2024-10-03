@@ -9,46 +9,47 @@ const ErrorResponse = require('../utils/errorResponse');
  * @param {Function} next - Função next do Express.
  */
 exports.protect = async (req, res, next) => {
-    console.log('2.1 Iniciando middleware protect');
+    console.log('1. Iniciando middleware protect');
     let token;
 
     try {
+        console.log('2. Headers da requisição:', req.headers);
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
             token = req.headers.authorization.split(' ')[1];
-            console.log('2.3 Token extraído:', token);
+            console.log('3. Token extraído:', token.substring(0, 10) + '...');
         }
 
         if (!token) {
-            return res.status(401).json({ message: 'Not authorized to access this route' });
+            console.log('4. Token não encontrado');
+            return res.status(401).json({ status: 'error', message: 'Usuário não autenticado' });
         }
 
-        console.log('2.4 Iniciando verificação do token');
-        console.log('JWT_SECRET:', process.env.JWT_SECRET);
+        console.log('5. JWT_SECRET (primeiros 5 caracteres):', process.env.JWT_SECRET.substring(0, 5));
         
         let decoded;
         try {
-            console.log('2.5 Chamando jwt.verify');
+            console.log('6. Verificando token');
             decoded = jwt.verify(token, process.env.JWT_SECRET);
-            console.log('2.6 Token verificado com sucesso:', decoded);
+            console.log('7. Token decodificado:', decoded);
         } catch (jwtError) {
-            console.error('2.7 Erro ao verificar token:', jwtError);
-            return res.status(401).json({ message: 'Invalid token', error: jwtError.message });
+            console.error('8. Erro ao verificar token:', jwtError);
+            return res.status(401).json({ status: 'error', message: 'Token inválido', error: jwtError.message });
         }
 
-        console.log('2.8 Buscando usuário no banco de dados');
+        console.log('9. Buscando usuário');
         const user = await User.findById(decoded.id).select('-password');
         
         if (!user) {
-            console.log('2.9 Usuário não encontrado');
-            return res.status(404).json({ message: 'User not found' });
+            console.log('10. Usuário não encontrado');
+            return res.status(404).json({ status: 'error', message: 'Usuário não encontrado' });
         }
 
-        console.log('2.10 Usuário autenticado com sucesso');
+        console.log('11. Usuário autenticado:', user);
         req.user = user;
         next();
     } catch (err) {
-        console.error('2.11 Erro no middleware protect:', err);
-        res.status(500).json({ message: 'Server error in authentication' });
+        console.error('12. Erro no middleware protect:', err);
+        res.status(500).json({ status: 'error', message: 'Erro do servidor na autenticação' });
     }
 };
 

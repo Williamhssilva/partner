@@ -12,6 +12,9 @@ const fs = require('fs');
 // Carrega as variáveis de ambiente
 dotenv.config();
 
+console.log('JWT_SECRET está definido:', !!process.env.JWT_SECRET);
+console.log('JWT_SECRET (primeiros 5 caracteres):', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 5) : 'não definido');
+
 const app = express();
 
 // Adicione isso no início do arquivo, antes de qualquer outra rota ou middleware
@@ -30,7 +33,8 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: ['https://williamhssilva.github.io', 'http://127.0.0.1:5500'], // Ajuste para a origem correta do seu frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 

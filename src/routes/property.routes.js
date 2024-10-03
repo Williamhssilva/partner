@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { createProperty } = require('../controllers/property.controller');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const propertyController = require('../controllers/property.controller');
 
@@ -19,6 +18,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Aplica o middleware protect a todas as rotas abaixo
+router.use(protect);
+
 // Rotas públicas
 router.route('/')
   .get(propertyController.getProperties)
@@ -33,7 +35,7 @@ router.route('/:id')
 router.post('/:id/favorite', protect, propertyController.toggleFavorite);
 router.post('/:id/visit', protect, propertyController.requestVisit);
 
-// Paginação e contagem de propriedades
+// Rotas para paginação e contagem (se ainda necessárias)
 router.get('/paginated', propertyController.getPropertiesPaginated);
 router.get('/count', propertyController.getTotalPropertiesCount);
 

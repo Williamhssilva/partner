@@ -10,9 +10,23 @@ const multer = require('multer');
 // @access  Public
 exports.getProperties = async (req, res) => {
     try {
+        
         const { page = 1, limit = 10, maxPrice, minPrice, bedrooms, propertyType, neighborhood, captureCity } = req.query;
 
+        if (!req.user) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'Usuário não autenticado'
+            });
+        }
+
         const query = {};
+
+        // Filtrar por agente apenas se o usuário for um corretor
+        console.log("rota de usuário", req.user.role);
+        if (req.user.role === 'corretor') {
+            query.capturedBy = req.user._id;
+        }
 
         if (maxPrice) {
             query.salePrice = { ...query.salePrice, $lte: parseFloat(maxPrice) };
@@ -103,7 +117,6 @@ exports.createProperty = asyncHandler(async (req, res) => {
             endDate: req.body.exclusivityEndDate,
             hasPromotion: req.body.hasPromotion === 'true'
         },
-        // Adicione estes campos que estão faltando
         title: req.body.title || `Propriedade em ${req.body.neighborhood || 'localização desconhecida'}`,
         description: req.body.description || `${req.body.propertyType || 'Propriedade'} em ${req.body.neighborhood || 'localização desconhecida'}`
     };
@@ -285,17 +298,6 @@ exports.getTotalPropertiesCount = async (query = {}) => {
     return await Property.countDocuments(query);
 };
 
-// Não é necessário exportar novamente, pois já estamos usando exports.
-
-// Adicione qualquer função que esteja faltando
-exports.someFunction = async (req, res) => {
-    res.status(501).json({
-        status: 'error',
-        message: 'Esta função ainda não foi implementada'
-    });
-};
-
-// Adicione a função getFeaturedProperties
 exports.getFeaturedProperties = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -324,7 +326,6 @@ exports.getFeaturedProperties = async (req, res) => {
     }
 };
 
-// Adicione a função getAgentDashboard
 exports.getAgentDashboard = async (req, res) => {
     try {
         if (!req.user || !req.user._id) {
