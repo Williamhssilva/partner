@@ -42,6 +42,11 @@ const leadSchema = new mongoose.Schema({
     createdAt: { 
         type: Date, 
         default: Date.now
+    },
+    capturedBy: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User',
+        required: true
     }
 }, {
     timestamps: true

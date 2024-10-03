@@ -9,7 +9,17 @@ exports.getLeads = asyncHandler(async (req, res, next) => {
     console.log('Requisição recebida para buscar leads');
     console.log('Usuário autenticado:', req.user);
 
-    const leads = await Lead.find();
+    let query = {};
+
+    // Filtrar por corretor se o usuário não for um administrador
+    if (req.user.role !== 'administrador') {
+        query.capturedBy = req.user._id;
+    }
+
+    // Adicione outros filtros à query conforme necessário
+    // ...
+
+    const leads = await Lead.find(query);
     console.log('Leads encontrados:', leads);
 
     res.status(200).json({
@@ -57,6 +67,9 @@ exports.getLead = asyncHandler(async (req, res, next) => {
 exports.createLead = asyncHandler(async (req, res, next) => {
     console.log('Iniciando criação de lead');
     console.log('Dados recebidos:', req.body);
+
+    // ID do usuário autenticado ao lead
+    req.body.capturedBy = req.user._id;
 
     try {
         const lead = await Lead.create(req.body);
