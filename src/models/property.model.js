@@ -54,6 +54,10 @@ const propertySchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    garages: {
+        type: Number,
+        required: true
+    },
 
     // Tipologia do Imóvel
     bedrooms: {

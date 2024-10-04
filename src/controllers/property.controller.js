@@ -105,6 +105,7 @@ exports.createProperty = asyncHandler(async (req, res) => {
         hasElevator: req.body.hasElevator === 'true',
         totalArea: parseFloat(req.body.totalArea),
         builtArea: parseFloat(req.body.builtArea),
+        garages: parseInt(req.body.garages),
         bedrooms: parseInt(req.body.bedrooms),
         suites: parseInt(req.body.suites),
         socialBathrooms: parseInt(req.body.socialBathrooms),

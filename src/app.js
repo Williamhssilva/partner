@@ -77,7 +77,8 @@ app.use((req, res, next) => {
 });
 
 // Rotas
-app.get('/', (req, res) => {
+app.get('/frontend', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'manage-properties.html'));
   res.json({ message: 'Bem-vindo ao sistema de parceria de corretores de imóveis!' });
 });
 
