@@ -150,35 +150,53 @@ exports.createProperty = asyncHandler(async (req, res) => {
 // @route   PUT /api/properties/:id
 // @access  Private
 exports.updateProperty = async (req, res) => {
-    console.log('Iniciando updateProperty');
-    console.log('ID da propriedade:', req.params.id);
-    console.log('Corpo da requisição:', req.body);
-    console.log('Arquivos recebidos:', req.files);
-
     try {
         const { id } = req.params;
         const updateData = req.body;
-        const existingImages = updateData.existingImages || [];
-        const imagesToDelete = updateData.imagesToDelete || [];
 
-        // Remove as imagens marcadas para deleção
-        updateData.images = existingImages.filter(img => !imagesToDelete.includes(img));
+        console.log('Dados recebidos para atualização:', updateData);
+        console.log('Arquivos recebidos:', req.files);
 
-        // Adiciona novas imagens, se houver
-        if (req.files && req.files.length > 0) {
-            const newImagePaths = req.files.map(file => file.path);
-            updateData.images = [...updateData.images, ...newImagePaths];
+        const property = await Property.findById(id);
+        if (!property) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Propriedade não encontrada'
+            });
         }
 
-        // Atualiza a propriedade no banco de dados
+        console.log('Imagens existentes antes da atualização:', property.images);
+
+        // Parse das imagens existentes
+        let updatedImages = [];
+        if (typeof updateData.images === 'string') {
+            updatedImages = JSON.parse(updateData.images);
+        } else if (Array.isArray(updateData.images)) {
+            updatedImages = updateData.images;
+        }
+
+        console.log('Imagens após parse:', updatedImages);
+
+        // Remover o prefixo 's/' das imagens existentes
+        updatedImages = updatedImages.map(img => img.replace(/^s\//i, ''));
+
+        console.log('Imagens após remoção do prefixo s/:', updatedImages);
+
+        // Adicionar novas imagens, se houver
+        if (req.files && req.files.length > 0) {
+            const newImagePaths = req.files.map(file => file.path.replace(/\\/g, '/'));
+            console.log('Novos caminhos de imagem:', newImagePaths);
+            updatedImages = [...updatedImages, ...newImagePaths];
+        }
+
+        // Atualizar o campo de imagens
+        updateData.images = updatedImages;
+
+        console.log('Imagens finais antes de salvar no banco:', updateData.images);
+
         const updatedProperty = await Property.findByIdAndUpdate(id, updateData, { new: true });
 
-        // Deleta os arquivos de imagem marcados para deleção
-        imagesToDelete.forEach(imagePath => {
-            fs.unlink(path.join(__dirname, '..', '..', imagePath), (err) => {
-                if (err) console.error('Erro ao deletar imagem:', err);
-            });
-        });
+        console.log('Imagens após atualização no banco de dados:', updatedProperty.images);
 
         res.status(200).json({
             status: 'success',
@@ -187,10 +205,8 @@ exports.updateProperty = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(400).json({
-            status: 'error',
-            message: error.message
-        });
+        console.error('Erro ao atualizar propriedade:', error);
+        res.status(400).json({ message: 'Erro ao atualizar propriedade', error: error.message });
     }
 };
 
