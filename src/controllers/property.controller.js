@@ -5,6 +5,13 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
+// No início do arquivo, adicione esta função auxiliar
+function parseNumberOrNull(value) {
+    if (value === '' || value === undefined) return null;
+    const parsed = Number(value);
+    return isNaN(parsed) ? null : parsed;
+}
+
 // @desc    Get all properties (with pagination)
 // @route   GET /api/properties
 // @access  Public
@@ -98,21 +105,22 @@ exports.createProperty = asyncHandler(async (req, res) => {
 
     const propertyData = {
         ...req.body,
-        capturedBy: req.user.id,
+        capturedBy: req.user._id,
+        capturedByName: req.user.name,
         isCondominium: req.body.isCondominium === 'true',
         hasBackyard: req.body.hasBackyard === 'true',
         hasBalcony: req.body.hasBalcony === 'true',
         hasElevator: req.body.hasElevator === 'true',
-        totalArea: parseFloat(req.body.totalArea),
-        builtArea: parseFloat(req.body.builtArea),
-        garages: parseInt(req.body.garages),
-        bedrooms: parseInt(req.body.bedrooms),
-        suites: parseInt(req.body.suites),
-        socialBathrooms: parseInt(req.body.socialBathrooms),
-        floors: parseInt(req.body.floors),
-        floor: parseInt(req.body.floor),
-        salePrice: parseFloat(req.body.salePrice) || 0, // Garante que salePrice seja um número
-        desiredNetPrice: parseFloat(req.body.desiredNetPrice),
+        totalArea: parseNumberOrNull(req.body.totalArea),
+        builtArea: parseNumberOrNull(req.body.builtArea),
+        garages: parseNumberOrNull(req.body.garages),
+        bedrooms: parseNumberOrNull(req.body.bedrooms),
+        suites: parseNumberOrNull(req.body.suites),
+        socialBathrooms: parseNumberOrNull(req.body.socialBathrooms),
+        floors: parseNumberOrNull(req.body.floors),
+        floor: parseNumberOrNull(req.body.floor),
+        salePrice: parseNumberOrNull(req.body.salePrice) || 0, // Garante que salePrice seja um número
+        desiredNetPrice: parseNumberOrNull(req.body.desiredNetPrice),
         exclusivityContract: {
             startDate: req.body.exclusivityStartDate,
             endDate: req.body.exclusivityEndDate,

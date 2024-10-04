@@ -7,6 +7,10 @@ const propertySchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    capturedByName: {
+        type: String,
+        required: true
+    },
     captureDate: {
         type: Date,
         default: Date.now
@@ -84,8 +88,8 @@ const propertySchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    floors: Number,
-    floor: Number,
+    floors: { type: Number, default: null },
+  floor: { type: Number, default: null },
 
     // Informações de Visita
     occupancyStatus: {
