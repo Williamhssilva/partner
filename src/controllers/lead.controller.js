@@ -162,25 +162,20 @@ exports.deleteLead = asyncHandler(async (req, res, next) => {
 // @desc    Update lead stage
 // @route   PUT /api/v1/leads/:id/stage
 // @access  Private
-exports.updateLeadStage = asyncHandler(async (req, res, next) => {
-    const { stage } = req.body;
+exports.updateLeadStage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { stage } = req.body;
 
-    if (!stage) {
-        return next(new ErrorResponse('Por favor, forneça um estágio válido', 400));
+        const lead = await Lead.findByIdAndUpdate(id, { stage }, { new: true, runValidators: true });
+
+        if (!lead) {
+            return res.status(404).json({ message: 'Lead não encontrado' });
+        }
+
+        res.json(lead);
+    } catch (error) {
+        console.error('Erro ao atualizar estágio do lead:', error);
+        res.status(400).json({ message: 'Erro ao atualizar estágio do lead', error: error.message });
     }
-
-    const lead = await Lead.findByIdAndUpdate(
-        req.params.id,
-        { stage },
-        { new: true, runValidators: true }
-    );
-
-    if (!lead) {
-        return next(new ErrorResponse(`Lead não encontrado com id ${req.params.id}`, 404));
-    }
-
-    res.status(200).json({
-        success: true,
-        data: lead
-    });
-});
+};

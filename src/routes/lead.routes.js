@@ -5,7 +5,7 @@ const {
     createLead,
     updateLead,
     deleteLead,
-    updateLeadStage // Adicionamos esta nova função
+    updateLeadStage  // Adicione esta linha
 } = require('../controllers/lead.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
@@ -27,4 +27,5 @@ router.route('/:id')
 router.route('/:id/stage')
     .put(authorize('corretor', 'administrador'), updateLeadStage);
 
+router.put('/:id/stage', updateLeadStage);
 module.exports = router;
