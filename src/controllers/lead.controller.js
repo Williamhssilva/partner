@@ -165,15 +165,60 @@ exports.deleteLead = asyncHandler(async (req, res, next) => {
 exports.updateLeadStage = async (req, res) => {
     try {
         const { id } = req.params;
-        const { stage } = req.body;
+        const { stage, position, oldStage, oldPosition } = req.body;
 
-        const lead = await Lead.findByIdAndUpdate(id, { stage }, { new: true, runValidators: true });
+        // Encontra o lead atual
+        const lead = await Lead.findById(id);
 
         if (!lead) {
             return res.status(404).json({ message: 'Lead não encontrado' });
         }
 
-        res.json(lead);
+        // Atualiza o estágio e a posição do lead
+        lead.stage = stage;
+        lead.position = position;
+
+        // Atualiza as posições dos outros leads
+        if (oldStage === stage) {
+            // Movendo dentro do mesmo estágio
+            if (position < oldPosition) {
+                // Movendo para cima
+                await Lead.updateMany(
+                    { stage, position: { $gte: position, $lt: oldPosition }, _id: { $ne: id } },
+                    { $inc: { position: 1 } }
+                );
+            } else {
+                // Movendo para baixo
+                await Lead.updateMany(
+                    { stage, position: { $gt: oldPosition, $lte: position }, _id: { $ne: id } },
+                    { $inc: { position: -1 } }
+                );
+            }
+        } else {
+            // Movendo para um novo estágio
+            await Lead.updateMany(
+                { stage: oldStage, position: { $gt: oldPosition } },
+                { $inc: { position: -1 } }
+            );
+            await Lead.updateMany(
+                { stage, position: { $gte: position }, _id: { $ne: id } },
+                { $inc: { position: 1 } }
+            );
+        }
+
+        // Salva as alterações
+        await lead.save();
+
+        // Busca todos os leads do estágio para garantir a ordem correta
+        const stageLeads = await Lead.find({ stage }).sort('position');
+
+        // Atualiza as posições para garantir que sejam sequenciais
+        for (let i = 0; i < stageLeads.length; i++) {
+            stageLeads[i].position = i;
+            await stageLeads[i].save();
+        }
+
+        res.json({ success: true, data: lead });
     } catch (error) {
         console.error('Erro ao atualizar estágio do lead:', error);
         res.status(400).json({ message: 'Erro ao atualizar estágio do lead', error: error.message });
