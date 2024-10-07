@@ -2,7 +2,7 @@ const Property = require('../models/property.model');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs').promises;
 const multer = require('multer');
 
 // No início do arquivo, adicione esta função auxiliar
@@ -92,7 +92,12 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
     }
 
-    res.status(200).json({ success: true, data: property });
+    res.status(200).json({
+        status: 'success',
+        data: {
+            property
+        }
+    });
 });
 
 // @desc    Create new property
@@ -119,7 +124,7 @@ exports.createProperty = asyncHandler(async (req, res) => {
         socialBathrooms: parseNumberOrNull(req.body.socialBathrooms),
         floors: parseNumberOrNull(req.body.floors),
         floor: parseNumberOrNull(req.body.floor),
-        salePrice: parseNumberOrNull(req.body.salePrice) || 0, // Garante que salePrice seja um número
+        salePrice: parseNumberOrNull(req.body.salePrice) || 0,
         desiredNetPrice: parseNumberOrNull(req.body.desiredNetPrice),
         exclusivityContract: {
             startDate: req.body.exclusivityStartDate,
@@ -158,66 +163,132 @@ exports.createProperty = asyncHandler(async (req, res) => {
 // @desc    Update property
 // @route   PUT /api/properties/:id
 // @access  Private
-exports.updateProperty = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
+exports.updateProperty = asyncHandler(async (req, res, next) => {
+    console.log('Iniciando atualização da propriedade');
+    console.log('ID da propriedade:', req.params.id);
+    console.log('Dados recebidos:', req.body);
+    console.log('Arquivos recebidos:', req.files);
 
-        console.log('Dados recebidos para atualização:', updateData);
-        console.log('Arquivos recebidos:', req.files);
+    let property = await Property.findById(req.params.id);
 
-        const property = await Property.findById(id);
-        if (!property) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'Propriedade não encontrada'
-            });
-        }
-
-        console.log('Imagens existentes antes da atualização:', property.images);
-
-        // Parse das imagens existentes
-        let updatedImages = [];
-        if (typeof updateData.images === 'string') {
-            updatedImages = JSON.parse(updateData.images);
-        } else if (Array.isArray(updateData.images)) {
-            updatedImages = updateData.images;
-        }
-
-        console.log('Imagens após parse:', updatedImages);
-
-        // Remover o prefixo 's/' das imagens existentes
-        updatedImages = updatedImages.map(img => img.replace(/^s\//i, ''));
-
-        console.log('Imagens após remoção do prefixo s/:', updatedImages);
-
-        // Adicionar novas imagens, se houver
-        if (req.files && req.files.length > 0) {
-            const newImagePaths = req.files.map(file => file.path.replace(/\\/g, '/'));
-            console.log('Novos caminhos de imagem:', newImagePaths);
-            updatedImages = [...updatedImages, ...newImagePaths];
-        }
-
-        // Atualizar o campo de imagens
-        updateData.images = updatedImages;
-
-        console.log('Imagens finais antes de salvar no banco:', updateData.images);
-
-        const updatedProperty = await Property.findByIdAndUpdate(id, updateData, { new: true });
-
-        console.log('Imagens após atualização no banco de dados:', updatedProperty.images);
-
-        res.status(200).json({
-            status: 'success',
-            data: {
-                property: updatedProperty
-            }
-        });
-    } catch (error) {
-        console.error('Erro ao atualizar propriedade:', error);
-        res.status(400).json({ message: 'Erro ao atualizar propriedade', error: error.message });
+    if (!property) {
+        return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
     }
-};
+
+    // Verificar se o usuário tem permissão para atualizar esta propriedade
+    if (property.capturedBy.toString() !== req.user.id && req.user.role !== 'administrador') {
+        return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
+    }
+
+    const updateData = { ...req.body };
+
+    // Processar imagens existentes
+    let existingImages = [];
+    if (req.body.existingImages) {
+        try {
+            existingImages = JSON.parse(req.body.existingImages);
+        } catch (error) {
+            console.error('Erro ao analisar existingImages:', error);
+        }
+    }
+
+    // Processar novas imagens
+    let newImagePaths = [];
+    if (req.files && req.files.length > 0) {
+        newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+        console.log('Novas imagens processadas:', newImagePaths);
+    }
+
+    // Combinar imagens existentes e novas
+    updateData.images = [...existingImages, ...newImagePaths];
+    console.log('Array de imagens atualizado:', updateData.images);
+
+    // Atualizar campos booleanos
+    ['isCondominium', 'hasBackyard', 'hasBalcony', 'hasElevator', 'hasPromotion'].forEach(field => {
+        updateData[field] = updateData[field] === 'true';
+    });
+
+    // Lidar com o campo hasPromotion separadamente
+    if ('exclusivityContract.hasPromotion' in updateData) {
+        updateData.exclusivityContract = {
+            ...property.exclusivityContract,
+            hasPromotion: updateData['exclusivityContract.hasPromotion'] === 'true'
+        };
+        delete updateData['exclusivityContract.hasPromotion'];
+    }
+
+    // Atualizar campos numéricos
+    ['totalArea', 'builtArea', 'garages', 'bedrooms', 'suites', 'socialBathrooms', 'floors', 'floor', 'salePrice', 'desiredNetPrice'].forEach(field => {
+        if (field in updateData) {
+            updateData[field] = parseNumberOrNull(updateData[field]);
+        }
+    });
+
+    property = await Property.findByIdAndUpdate(req.params.id, updateData, {
+        new: true,
+        runValidators: true
+    });
+
+    console.log('Propriedade atualizada:', property);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            property
+        }
+    });
+});
+
+exports.removeImage = asyncHandler(async (req, res, next) => {
+    console.log('Iniciando remoção de imagem');
+    const { id, index } = req.params;
+    console.log(`ID da propriedade: ${id}, Índice da imagem: ${index}`);
+
+    let property = await Property.findById(id);
+
+    if (!property) {
+        return next(new ErrorResponse(`Property not found with id of ${id}`, 404));
+    }
+
+    // Verificar se o usuário tem permissão para atualizar esta propriedade
+    if (property.capturedBy.toString() !== req.user.id && req.user.role !== 'administrador') {
+        return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
+    }
+
+    if (index < 0 || index >= property.images.length) {
+        return next(new ErrorResponse(`Invalid image index`, 400));
+    }
+
+    const imageToRemove = property.images[index];
+    console.log('Imagem a ser removida:', imageToRemove);
+
+    // Remover a imagem do array
+    property.images.splice(index, 1);
+
+    // Salvar a propriedade atualizada
+    await property.save();
+    console.log('Propriedade atualizada no banco de dados');
+
+    // Remover o arquivo físico
+    const filePath = path.join(__dirname, '..', '..', imageToRemove);
+    console.log('Caminho do arquivo a ser removido:', filePath);
+    try {
+        await fs.unlink(filePath);
+        console.log('Arquivo físico removido com sucesso');
+    } catch (error) {
+        console.error('Erro ao remover arquivo físico:', error);
+        // Não retornamos erro aqui para não impedir a atualização do banco de dados
+    }
+
+    console.log('Propriedade após remoção da imagem:', property);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            property
+        }
+    });
+});
 
 // @desc    Delete property
 // @route   DELETE /api/properties/:id
