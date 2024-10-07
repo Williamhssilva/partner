@@ -194,8 +194,15 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 
     // Processar novas imagens
     let newImagePaths = [];
-    if (req.files && req.files.length > 0) {
-        newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+    if (req.files) {
+        // Verifica se req.files é um array ou um objeto
+        if (Array.isArray(req.files)) {
+            newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+        } else if (req.files.images) {
+            // Se não for um array, assume que é um objeto com a propriedade 'images'
+            const imagesArray = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+            newImagePaths = imagesArray.map(file => `/uploads/${file.filename}`);
+        }
         console.log('Novas imagens processadas:', newImagePaths);
     }
 
