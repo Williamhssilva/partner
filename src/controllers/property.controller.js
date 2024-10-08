@@ -182,33 +182,34 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 
     const updateData = { ...req.body };
 
-    // Processar imagens existentes
-    let existingImages = [];
+    // No método de atualização da propriedade
+    console.log('Dados recebidos:', req.body);
+
+    let updatedImages = [];
     if (req.body.existingImages) {
         try {
-            existingImages = JSON.parse(req.body.existingImages);
+            updatedImages = JSON.parse(req.body.existingImages);
+            console.log('Imagens existentes recebidas:', updatedImages);
         } catch (error) {
-            console.error('Erro ao analisar existingImages:', error);
+            console.error('Erro ao analisar imagens existentes:', error);
         }
     }
 
-    // Processar novas imagens
-    let newImagePaths = [];
-    if (req.files) {
-        // Verifica se req.files é um array ou um objeto
-        if (Array.isArray(req.files)) {
-            newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
-        } else if (req.files.images) {
-            // Se não for um array, assume que é um objeto com a propriedade 'images'
-            const imagesArray = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-            newImagePaths = imagesArray.map(file => `/uploads/${file.filename}`);
-        }
-        console.log('Novas imagens processadas:', newImagePaths);
+    // Se não houver imagens existentes e nenhuma nova imagem, mantenha as imagens atuais
+    if (updatedImages.length === 0 && (!req.files || req.files.length === 0)) {
+        updatedImages = property.images;
     }
 
-    // Combinar imagens existentes e novas
-    updateData.images = [...existingImages, ...newImagePaths];
-    console.log('Array de imagens atualizado:', updateData.images);
+    // Adicionar novas imagens, se houver
+    if (req.files && req.files.length > 0) {
+        const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+        updatedImages = [...updatedImages, ...newImagePaths];
+    }
+
+    console.log('Imagens após processamento:', updatedImages);
+
+    // Atualizar o campo images no updateData com a nova ordem
+    updateData.images = updatedImages;
 
     // Atualizar campos booleanos
     ['isCondominium', 'hasBackyard', 'hasBalcony', 'hasElevator', 'hasPromotion'].forEach(field => {
@@ -230,6 +231,8 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
             updateData[field] = parseNumberOrNull(updateData[field]);
         }
     });
+
+    console.log('Dados de atualização final:', updateData);
 
     property = await Property.findByIdAndUpdate(req.params.id, updateData, {
         new: true,
