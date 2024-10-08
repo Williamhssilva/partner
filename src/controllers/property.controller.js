@@ -204,6 +204,7 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
     if (req.files && req.files.length > 0) {
         const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
         updatedImages = [...updatedImages, ...newImagePaths];
+        console.log('Ordem das imagens antes de salvar:', updatedImages.images);
     }
 
     console.log('Imagens após processamento:', updatedImages);
