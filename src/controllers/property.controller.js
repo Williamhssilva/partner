@@ -206,6 +206,7 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 
     // Adicionar novas imagens, se houver
     if (req.files && req.files.length > 0) {
+<<<<<<< HEAD
         const imageOrder = JSON.parse(req.body.imageOrder || '[]');
         const existingImages = property.images; // Imagens existentes
         const newImages = req.files.map(file => getImagePath(file.filename));
@@ -217,6 +218,11 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
         }));
 
         propertyData.images = orderedImages; // Salvar a nova ordem no banco de dados
+=======
+        const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+        updatedImages = [...updatedImages, ...newImagePaths];
+        console.log('Ordem das imagens antes de salvar:', updatedImages.images);
+>>>>>>> f248970e2e01132fdae36cdbc3621a698372ab26
     }
 
     console.log('Imagens após processamento:', updatedImages);
