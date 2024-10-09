@@ -17,7 +17,7 @@ function parseNumberOrNull(value) {
 // @access  Public
 exports.getProperties = async (req, res) => {
     try {
-        
+
         const { page = 1, limit = 10, maxPrice, minPrice, bedrooms, propertyType, neighborhood, captureCity } = req.query;
 
         if (!req.user) {
@@ -143,7 +143,7 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
         console.log(propertyData.images);
     }
 
-    
+
 
     try {
         console.log('Tentando criar propriedade no banco de dados');
@@ -186,9 +186,7 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 
     const updateData = { ...req.body };
 
-    // No método de atualização da propriedade
-    console.log('Dados recebidos:', req.body);
-
+    // Processar imagens existentes
     let updatedImages = [];
     if (req.body.existingImages) {
         try {
@@ -206,26 +204,32 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 
     // Adicionar novas imagens, se houver
     if (req.files && req.files.length > 0) {
-<<<<<<< HEAD
-        const imageOrder = JSON.parse(req.body.imageOrder || '[]');
-        const existingImages = property.images; // Imagens existentes
-        const newImages = req.files.map(file => getImagePath(file.filename));
-
-        // Combinar imagens existentes e novas na ordem correta
-        const orderedImages = [...existingImages, ...newImages].map((img, index) => ({
-            path: img,
-            order: imageOrder[index] // A ordem que foi enviada
-        }));
-
-        propertyData.images = orderedImages; // Salvar a nova ordem no banco de dados
-=======
         const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
         updatedImages = [...updatedImages, ...newImagePaths];
-        console.log('Ordem das imagens antes de salvar:', updatedImages.images);
->>>>>>> f248970e2e01132fdae36cdbc3621a698372ab26
+        console.log('Ordem das imagens antes de salvar:', updatedImages);
     }
 
-    console.log('Imagens após processamento:', updatedImages);
+    // Processar imagens a serem excluídas
+    let imagesToDelete = [];
+    if (req.body.imagesToDelete) {
+        try {
+            imagesToDelete = JSON.parse(req.body.imagesToDelete);
+            console.log('Imagens a serem excluídas:', imagesToDelete);
+        } catch (error) {
+            console.error('Erro ao analisar imagens a serem excluídas:', error);
+        }
+    }
+
+    // Excluir as imagens do sistema de arquivos
+    await Promise.all(imagesToDelete.map(async (image) => {
+        const imagePath = path.join(__dirname, '../..', 'uploads', path.basename(image));
+        try {
+            await fs.unlink(imagePath);
+            console.log(`Imagem ${imagePath} excluída com sucesso.`);
+        } catch (err) {
+            console.error('Erro ao excluir a imagem:', err);
+        }
+    }));
 
     // Atualizar o campo images no updateData com a nova ordem
     updateData.images = updatedImages;
@@ -291,26 +295,30 @@ exports.removeImage = asyncHandler(async (req, res, next) => {
     const imageToRemove = property.images[index];
     console.log('Imagem a ser removida:', imageToRemove);
 
-    // Remover a imagem do array
-    property.images.splice(index, 1);
+    // Obter o caminho da imagem
+    const imagePath = path.join(__dirname, '../..', 'uploads', path.basename(imageToRemove));
+    console.log(`Tentando excluir a imagem: ${imagePath}`);
 
-    // Salvar a propriedade atualizada
-    await property.save();
-    console.log('Propriedade atualizada no banco de dados');
-
-    // Remover o arquivo físico
-    const filePath = path.join(__dirname, '..', '..', imageToRemove);
-    console.log('Caminho do arquivo a ser removido:', filePath);
     try {
-        await fs.unlink(filePath);
-        console.log('Arquivo físico removido com sucesso');
-    } catch (error) {
-        console.error('Erro ao remover arquivo físico:', error);
-        // Não retornamos erro aqui para não impedir a atualização do banco de dados
+        // Verifica se o arquivo existe antes de tentar excluí-lo
+        await fs.access(imagePath);
+        await fs.unlink(imagePath);
+        console.log(`Imagem ${imagePath} excluída com sucesso.`);
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            console.error(`Imagem não encontrada: ${imagePath}`);
+        } else {
+            console.error('Erro ao excluir a imagem:', err);
+        }
+        return next(new ErrorResponse(`Erro ao excluir a imagem: ${err.message}`, 500));
     }
 
-    console.log('Propriedade após remoção da imagem:', property);
+    // Remover a imagem do array
+    property.images.splice(index, 1);
+    // Salvar a propriedade atualizada
+    await property.save();
 
+    console.log('Propriedade atualizada no banco de dados');
     res.status(200).json({
         status: 'success',
         data: {
@@ -342,6 +350,23 @@ exports.deleteProperty = asyncHandler(async (req, res, next) => {
             console.log('Usuário não tem permissão para excluir esta propriedade');
             return next(new ErrorResponse(`Usuário não tem permissão para excluir esta propriedade`, 403));
         }
+
+        // Excluir as imagens
+        await Promise.all(property.images.map(async (image) => {
+            const imagePath = path.join(__dirname, '../..', 'uploads', path.basename(image));
+            console.log(`Tentando excluir a imagem: ${imagePath}`);
+            try {
+                await fs.access(imagePath); // Verifica se o arquivo existe
+                await fs.unlink(imagePath);
+                console.log(`Imagem ${imagePath} excluída com sucesso.`);
+            } catch (err) {
+                if (err.code === 'ENOENT') {
+                    console.error(`Imagem não encontrada: ${imagePath}`);
+                } else {
+                    console.error('Erro ao excluir a imagem:', err);
+                }
+            }
+        }));
 
         // Usar deleteOne() em vez de remove()
         const result = await Property.deleteOne({ _id: req.params.id });
