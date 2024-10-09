@@ -103,11 +103,7 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @desc    Create new property
 // @route   POST /api/properties
 // @access  Private
-exports.createProperty = asyncHandler(async (req, res) => {
-    console.log('Iniciando criação de propriedade');
-    console.log('Dados recebidos:', req.body);
-    console.log('Arquivos recebidos:', req.files);
-
+exports.createProperty = asyncHandler(async (req, res, next) => {
     const propertyData = {
         ...req.body,
         capturedBy: req.user._id,
@@ -137,9 +133,17 @@ exports.createProperty = asyncHandler(async (req, res) => {
 
     // Handle multiple image uploads
     if (req.files && req.files.length > 0) {
-        propertyData.images = req.files.map(file => `/uploads/${file.filename}`);
-        console.log('Imagens processadas:', propertyData.images);
+        const imageOrder = JSON.parse(req.body.imageOrder || '[]');
+        const images = req.files.map(file => `/uploads/${file.filename}`);
+
+        // Reordenar as imagens de acordo com a ordem recebida
+        const orderedImages = imageOrder.map(index => images[index]);
+        console.log('Ordem das imagens recebida:', req.body.imageOrder);
+        propertyData.images = orderedImages; // Salvar a ordem correta no banco de dados
+        console.log(propertyData.images);
     }
+
+    
 
     try {
         console.log('Tentando criar propriedade no banco de dados');
@@ -202,8 +206,17 @@ exports.updateProperty = asyncHandler(async (req, res, next) => {
 
     // Adicionar novas imagens, se houver
     if (req.files && req.files.length > 0) {
-        const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
-        updatedImages = [...updatedImages, ...newImagePaths];
+        const imageOrder = JSON.parse(req.body.imageOrder || '[]');
+        const existingImages = property.images; // Imagens existentes
+        const newImages = req.files.map(file => getImagePath(file.filename));
+
+        // Combinar imagens existentes e novas na ordem correta
+        const orderedImages = [...existingImages, ...newImages].map((img, index) => ({
+            path: img,
+            order: imageOrder[index] // A ordem que foi enviada
+        }));
+
+        propertyData.images = orderedImages; // Salvar a nova ordem no banco de dados
     }
 
     console.log('Imagens após processamento:', updatedImages);
