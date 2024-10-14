@@ -24,7 +24,7 @@ const leadSchema = new mongoose.Schema({
     },
     stage: {
         type: String,
-        enum: ['novo', 'contatoInicial', 'qualificacao', 'apresentacao', 'visita', 'negociacao', 'proposta', 'contrato', 'concluido'],
+        enum: ['novo', 'qualificacao', 'apresentacao', 'visita', 'negociacao', 'posvenda', 'contrato', 'concluido'],
         default: 'novo'
     },
     position: {
