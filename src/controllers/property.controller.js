@@ -122,10 +122,10 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 exports.createProperty = async (req, res) => {
     try {
         // Verifique se o número de imagens está dentro do limite
-        if (req.files.length > 20) { // Altere para o novo limite
+        if (req.files.length > 30) { // Altere para o novo limite
             return res.status(400).json({
                 status: 'fail',
-                message: 'Você pode enviar no máximo 20 imagens.'
+                message: 'Você pode enviar no máximo 30 imagens.'
             });
         }
 
