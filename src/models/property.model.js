@@ -17,21 +17,17 @@ const propertySchema = new mongoose.Schema({
     },
     captureCity: {
         type: String,
-        required: true
     },
     captureCEP: {
         type: String,
-        required: true
     },
 
     // Localização do Imóvel
     address: {
         type: String,
-        required: true
     },
     neighborhood: {
         type: String,
-        required: true
     },
     isCondominium: {
         type: Boolean,
@@ -52,29 +48,23 @@ const propertySchema = new mongoose.Schema({
     },
     totalArea: {
         type: Number,
-        required: true
     },
     builtArea: {
         type: Number,
-        required: true
     },
     garages: {
         type: Number,
-        required: true
     },
 
     // Tipologia do Imóvel
     bedrooms: {
         type: Number,
-        required: true
     },
     suites: {
         type: Number,
-        required: true
     },
     socialBathrooms: {
         type: Number,
-        required: true
     },
     hasBackyard: {
         type: Boolean,
@@ -100,17 +90,14 @@ const propertySchema = new mongoose.Schema({
     keyLocation: String,
     ownerName: {
         type: String,
-        required: true
     },
     ownerContact: {
         type: String,
-        required: true
     },
 
     // Informações Financeiras
     salePrice: {
         type: Number,
-        required: true
     },
     desiredNetPrice: Number,
 

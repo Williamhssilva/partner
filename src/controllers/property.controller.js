@@ -12,6 +12,22 @@ function parseNumberOrNull(value) {
     return isNaN(parsed) ? null : parsed;
 }
 
+// Função para sanitizar os dados da propriedade
+function sanitizePropertyData(property) {
+    return {
+        ...property,
+        totalArea: property.totalArea !== null && property.totalArea !== undefined ? property.totalArea : 0,
+        builtArea: property.builtArea !== null && property.builtArea !== undefined ? property.builtArea : 0,
+        garages: property.garages !== null && property.garages !== undefined ? property.garages : 0,
+        bedrooms: property.bedrooms !== null && property.bedrooms !== undefined ? property.bedrooms : 0,
+        suites: property.suites !== null && property.suites !== undefined ? property.suites : 0,
+        socialBathrooms: property.socialBathrooms !== null && property.socialBathrooms !== undefined ? property.socialBathrooms : 0,
+        ownerName: property.ownerName || "", // String vazia se não fornecido
+        neighborhood: property.neighborhood || "", // String vazia se não fornecido
+        // Adicione outros campos conforme necessário
+    };
+}
+
 // @desc    Get all properties (with pagination)
 // @route   GET /api/properties
 // @access  Public
@@ -154,7 +170,8 @@ exports.createProperty = async (req, res) => {
         }
 
         console.log('Tentando criar propriedade no banco de dados');
-        const property = await Property.create(propertyData);
+        const sanitizedData = sanitizePropertyData(propertyData); // Sanitiza os dados
+        const property = await Property.create(sanitizedData);
         console.log('Propriedade criada com sucesso:', property);
 
         res.status(201).json({
