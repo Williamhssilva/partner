@@ -33,7 +33,7 @@ router.use(protect);
 // Rotas públicas
 router.route('/')
   .get(propertyController.getProperties)
-  .post(protect, authorize('corretor', 'administrador'), upload.array('images', 10), propertyController.createProperty);
+  .post(protect, authorize('corretor', 'administrador'), upload.array('images', 30), propertyController.createProperty);
 
 router.route('/:id')
   .get(propertyController.getProperty)

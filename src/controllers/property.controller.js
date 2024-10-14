@@ -103,49 +103,56 @@ exports.getProperty = asyncHandler(async (req, res, next) => {
 // @desc    Create new property
 // @route   POST /api/properties
 // @access  Private
-exports.createProperty = asyncHandler(async (req, res, next) => {
-    const propertyData = {
-        ...req.body,
-        capturedBy: req.user._id,
-        capturedByName: req.user.name,
-        isCondominium: req.body.isCondominium === 'true',
-        hasBackyard: req.body.hasBackyard === 'true',
-        hasBalcony: req.body.hasBalcony === 'true',
-        hasElevator: req.body.hasElevator === 'true',
-        totalArea: parseNumberOrNull(req.body.totalArea),
-        builtArea: parseNumberOrNull(req.body.builtArea),
-        garages: parseNumberOrNull(req.body.garages),
-        bedrooms: parseNumberOrNull(req.body.bedrooms),
-        suites: parseNumberOrNull(req.body.suites),
-        socialBathrooms: parseNumberOrNull(req.body.socialBathrooms),
-        floors: parseNumberOrNull(req.body.floors),
-        floor: parseNumberOrNull(req.body.floor),
-        salePrice: parseNumberOrNull(req.body.salePrice) || 0,
-        desiredNetPrice: parseNumberOrNull(req.body.desiredNetPrice),
-        exclusivityContract: {
-            startDate: req.body.exclusivityStartDate,
-            endDate: req.body.exclusivityEndDate,
-            hasPromotion: req.body.hasPromotion === 'true'
-        },
-        title: req.body.title || `Propriedade em ${req.body.neighborhood || 'localização desconhecida'}`,
-        description: req.body.description || `${req.body.propertyType || 'Propriedade'} em ${req.body.neighborhood || 'localização desconhecida'}`
-    };
-
-    // Handle multiple image uploads
-    if (req.files && req.files.length > 0) {
-        const imageOrder = JSON.parse(req.body.imageOrder || '[]');
-        const images = req.files.map(file => `/uploads/${file.filename}`);
-
-        // Reordenar as imagens de acordo com a ordem recebida
-        const orderedImages = imageOrder.map(index => images[index]);
-        console.log('Ordem das imagens recebida:', req.body.imageOrder);
-        propertyData.images = orderedImages; // Salvar a ordem correta no banco de dados
-        console.log(propertyData.images);
-    }
-
-
-
+exports.createProperty = async (req, res) => {
     try {
+        // Verifique se o número de imagens está dentro do limite
+        if (req.files.length > 20) { // Altere para o novo limite
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Você pode enviar no máximo 20 imagens.'
+            });
+        }
+
+        // Continue com a lógica de criação da propriedade
+        const propertyData = {
+            ...req.body,
+            capturedBy: req.user._id,
+            capturedByName: req.user.name,
+            isCondominium: req.body.isCondominium === 'true',
+            hasBackyard: req.body.hasBackyard === 'true',
+            hasBalcony: req.body.hasBalcony === 'true',
+            hasElevator: req.body.hasElevator === 'true',
+            totalArea: parseNumberOrNull(req.body.totalArea),
+            builtArea: parseNumberOrNull(req.body.builtArea),
+            garages: parseNumberOrNull(req.body.garages),
+            bedrooms: parseNumberOrNull(req.body.bedrooms),
+            suites: parseNumberOrNull(req.body.suites),
+            socialBathrooms: parseNumberOrNull(req.body.socialBathrooms),
+            floors: parseNumberOrNull(req.body.floors),
+            floor: parseNumberOrNull(req.body.floor),
+            salePrice: parseNumberOrNull(req.body.salePrice) || 0,
+            desiredNetPrice: parseNumberOrNull(req.body.desiredNetPrice),
+            exclusivityContract: {
+                startDate: req.body.exclusivityStartDate,
+                endDate: req.body.exclusivityEndDate,
+                hasPromotion: req.body.hasPromotion === 'true'
+            },
+            title: req.body.title || `Propriedade em ${req.body.neighborhood || 'localização desconhecida'}`,
+            description: req.body.description || `${req.body.propertyType || 'Propriedade'} em ${req.body.neighborhood || 'localização desconhecida'}`
+        };
+
+        // Handle multiple image uploads
+        if (req.files && req.files.length > 0) {
+            const imageOrder = JSON.parse(req.body.imageOrder || '[]');
+            const images = req.files.map(file => `/uploads/${file.filename}`);
+
+            // Reordenar as imagens de acordo com a ordem recebida
+            const orderedImages = imageOrder.map(index => images[index]);
+            console.log('Ordem das imagens recebida:', req.body.imageOrder);
+            propertyData.images = orderedImages; // Salvar a ordem correta no banco de dados
+            console.log(propertyData.images);
+        }
+
         console.log('Tentando criar propriedade no banco de dados');
         const property = await Property.create(propertyData);
         console.log('Propriedade criada com sucesso:', property);
@@ -156,13 +163,12 @@ exports.createProperty = asyncHandler(async (req, res, next) => {
         });
     } catch (error) {
         console.error('Erro ao criar propriedade:', error);
-        res.status(400).json({
-            success: false,
-            message: error.message,
-            details: error.errors ? Object.values(error.errors).map(err => err.message) : []
+        res.status(500).json({
+            status: 'error',
+            message: 'Erro interno do servidor ao criar a propriedade.'
         });
     }
-});
+};
 
 // @desc    Update property
 // @route   PUT /api/properties/:id
