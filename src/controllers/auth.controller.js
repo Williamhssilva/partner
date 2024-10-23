@@ -82,6 +82,13 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (!user.isApproved) {
+      return res.status(401).json({
+        status: 'fail',
+        message: 'Olá, seja bem-vindo! Sua conta ainda não foi aprovada. Aguarde a aprovação.'
+      });
+    }
+
     const token = signToken(user._id);
     res.status(200).json({
       status: 'success',
