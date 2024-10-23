@@ -9,7 +9,14 @@ exports.getLeads = asyncHandler(async (req, res, next) => {
     console.log('Requisição recebida para buscar leads');
     console.log('Usuário autenticado:', req.user);
 
-    const leads = await Lead.find();
+    const query = {};
+
+    // Filtrar leads apenas se o usuário for um corretor
+    if (req.user.role === 'corretor') {
+        query.capturedBy = req.user._id; // Filtra leads atribuídos ao corretor
+    }
+
+    const leads = await Lead.find(query); // Busca os leads com base na consulta
     console.log('Leads encontrados:', leads);
 
     res.status(200).json({
@@ -59,6 +66,10 @@ exports.createLead = asyncHandler(async (req, res, next) => {
     console.log('Dados recebidos:', req.body);
 
     try {
+        // Adiciona o ID do corretor e o nome do corretor ao corpo da requisição
+        req.body.capturedBy = req.user._id; // ID do corretor
+        req.body.capturedByName = req.user.name; // Nome do corretor
+
         const lead = await Lead.create(req.body);
         res.status(201).json({
             success: true,
