@@ -7,12 +7,10 @@ const leadSchema = new mongoose.Schema({
     },
     capturedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: [true, 'Por favor, forneça um usuário para o lead']
+        ref: 'User'
     },
     capturedByName: {
-        type: String,
-        required: [true, 'Por favor, forneça um nome para o lead']
+        type: String
     },
     email: { 
         type: String, 

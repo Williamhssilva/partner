@@ -10,7 +10,7 @@ exports.getDashboardData = asyncHandler(async (req, res, next) => {
     const pendingApprovals = await User.countDocuments({ role: 'corretor', isApproved: false });
 
     const propertiesByType = await Property.aggregate([
-        { $group: { _id: '$type', count: { $sum: 1 } } },
+        { $group: { _id: '$propertyType', count: { $sum: 1 } } },
         { $project: { _id: 0, type: '$_id', count: 1 } }
     ]);
 
