@@ -27,8 +27,10 @@ const upload = multer({
     }
 });
 
-// Aplica o middleware protect a todas as rotas abaixo
+
 router.use(protect);
+
+router.get('/search', protect, propertyController.searchProperties);
 
 // Rotas públicas
 router.route('/')
@@ -53,6 +55,13 @@ router.get('/', propertyController.getProperties);
 
 // Nova rota para o dashboard do corretor
 router.get('/agent/dashboard', protect, propertyController.getAgentDashboard);
+
+// rota para similar properties 
+router.get('/:id/similar', propertyController.getSimilarProperties);
+// rota para atualizar propriedade
+//router.put('/properties/:id', protect, propertyController.updateProperty);
+
+router.delete('/:id/images/:index', protect, propertyController.removeImage);
 
 // rota para similar properties 
 router.get('/:id/similar', propertyController.getSimilarProperties);

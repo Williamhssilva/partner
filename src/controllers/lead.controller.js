@@ -1,4 +1,5 @@
 const Lead = require('../models/lead.model');
+const Property = require('../models/property.model');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
 
@@ -235,3 +236,40 @@ exports.updateLeadStage = async (req, res) => {
         res.status(400).json({ message: 'Erro ao atualizar estágio do lead', error: error.message });
     }
 };
+
+exports.linkPropertyToLead = asyncHandler(async (req, res, next) => {
+    console.log('Iniciando linkPropertyToLead');
+    console.log('Params:', req.params);
+    console.log('Body:', req.body);
+
+    const { id } = req.params;
+    const { propertyId } = req.body;
+
+    console.log(`Tentando vincular propriedade ${propertyId} ao lead ${id}`);
+
+    const lead = await Lead.findById(id);
+    if (!lead) {
+        console.log(`Lead não encontrado com id ${id}`);
+        return next(new ErrorResponse(`Lead não encontrado com id ${id}`, 404));
+    }
+
+    console.log('Lead encontrado:', lead);
+
+    const property = await Property.findById(propertyId);
+    if (!property) {
+        console.log(`Propriedade não encontrada com id ${propertyId}`);
+        return next(new ErrorResponse(`Propriedade não encontrada com id ${propertyId}`, 404));
+    }
+
+    console.log('Propriedade encontrada:', property);
+
+    lead.linkedProperty = propertyId;
+    await lead.save();
+
+    console.log(`Propriedade ${propertyId} vinculada com sucesso ao lead ${id}`);
+
+    res.status(200).json({
+        success: true,
+        data: lead
+    });
+});

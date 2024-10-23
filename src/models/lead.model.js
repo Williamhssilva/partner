@@ -53,6 +53,10 @@ const leadSchema = new mongoose.Schema({
     createdAt: { 
         type: Date, 
         default: Date.now
+    },
+    linkedProperty: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Property'
     }
 }, {
     timestamps: true

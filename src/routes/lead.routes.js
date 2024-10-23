@@ -9,6 +9,7 @@ const {
 } = require('../controllers/lead.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
+const leadController = require('../controllers/lead.controller'); // Adicione esta linha
 
 const router = express.Router();
 
@@ -28,4 +29,8 @@ router.route('/:id/stage')
     .put(authorize('corretor', 'administrador'), updateLeadStage);
 
 router.put('/:id/stage', updateLeadStage);
+
+// Adicione esta nova rota
+router.post('/:id/link-property', protect, leadController.linkPropertyToLead);
+
 module.exports = router;

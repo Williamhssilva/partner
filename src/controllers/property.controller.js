@@ -606,3 +606,39 @@ exports.getSimilarProperties = async (req, res) => {
         });
     }
 };
+
+exports.searchProperties = asyncHandler(async (req, res, next) => {
+    const { term } = req.query;
+    
+    if (!term || term.length < 3) {
+        return next(new ErrorResponse('O termo de busca deve ter pelo menos 3 caracteres', 400));
+    }
+
+    try {
+        const query = {
+            $or: [
+                { title: { $regex: term, $options: 'i' } },
+                { description: { $regex: term, $options: 'i' } },
+                { address: { $regex: term, $options: 'i' } }
+            ]
+        };
+
+        // Se o usuário for um corretor, filtrar apenas suas propriedades
+        if (req.user.role === 'corretor') {
+            query.capturedBy = req.user._id;
+        }
+
+        const properties = await Property.find(query).limit(10);
+
+        console.log('Propriedades encontradas:', properties.length);
+
+        res.status(200).json({
+            success: true,
+            count: properties.length,
+            data: properties
+        });
+    } catch (error) {
+        console.error('Erro na busca de propriedades:', error);
+        return next(new ErrorResponse('Erro ao buscar propriedades', 500));
+    }
+});
