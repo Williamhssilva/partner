@@ -15,8 +15,8 @@ exports.getDashboardData = asyncHandler(async (req, res, next) => {
     ]);
 
     const leadsByStatus = await Lead.aggregate([
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-        { $project: { _id: 0, status: '$_id', count: 1 } }
+        { $group: { _id: '$stage', count: { $sum: 1 } } },
+        { $project: { _id: 0, stage: '$_id', count: 1 } }
     ]);
 
     // Simular atividades recentes (você precisará implementar um sistema de log de atividades real)
@@ -34,7 +34,7 @@ exports.getDashboardData = asyncHandler(async (req, res, next) => {
             totalAgents,
             pendingApprovals,
             propertiesByType: Object.fromEntries(propertiesByType.map(item => [item.type, item.count])),
-            leadsByStatus: Object.fromEntries(leadsByStatus.map(item => [item.status, item.count])),
+            leadsByStatus: Object.fromEntries(leadsByStatus.map(item => [item.stage, item.count])),
             recentActivities
         }
     });
