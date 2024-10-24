@@ -273,3 +273,21 @@ exports.linkPropertyToLead = asyncHandler(async (req, res, next) => {
         data: lead
     });
 });
+
+// Adicione esta nova função ao controlador
+exports.unlinkPropertyFromLead = asyncHandler(async (req, res, next) => {
+    const lead = await Lead.findById(req.params.id);
+
+    if (!lead) {
+        return next(new ErrorResponse(`Lead não encontrado com id ${req.params.id}`, 404));
+    }
+
+    // Remover a propriedade vinculada
+    lead.linkedProperty = undefined;
+    await lead.save();
+
+    res.status(200).json({
+        success: true,
+        data: lead
+    });
+});

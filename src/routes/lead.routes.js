@@ -28,9 +28,12 @@ router.route('/:id')
 router.route('/:id/stage')
     .put(authorize('corretor', 'administrador'), updateLeadStage);
 
-router.put('/:id/stage', updateLeadStage);
+// Atualizar o estágio do lead
+//router.put('/:id/stage', updateLeadStage);
 
-// Adicione esta nova rota
+// Linkar propriedade ao lead
 router.post('/:id/link-property', protect, leadController.linkPropertyToLead);
+
+router.delete('/:id/unlink-property', protect, leadController.unlinkPropertyFromLead);
 
 module.exports = router;
