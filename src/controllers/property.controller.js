@@ -191,108 +191,109 @@ exports.createProperty = async (req, res) => {
 // @route   PUT /api/properties/:id
 // @access  Private
 exports.updateProperty = asyncHandler(async (req, res, next) => {
-    console.log('Iniciando atualização da propriedade');
-    console.log('ID da propriedade:', req.params.id);
-    console.log('Dados recebidos:', req.body);
-    console.log('Arquivos recebidos:', req.files);
+    try {
+        let property = await Property.findById(req.params.id);
 
-    let property = await Property.findById(req.params.id);
-
-    if (!property) {
-        return next(new ErrorResponse(`Property not found with id of ${req.params.id}`, 404));
-    }
-
-    // Verificar se o usuário tem permissão para atualizar esta propriedade
-    if (property.capturedBy.toString() !== req.user.id && req.user.role !== 'administrador') {
-        return next(new ErrorResponse(`User ${req.user.id} is not authorized to update this property`, 401));
-    }
-
-    const updateData = { ...req.body };
-
-    // Processar imagens existentes
-    let updatedImages = [];
-    if (req.body.existingImages) {
-        try {
-            updatedImages = JSON.parse(req.body.existingImages);
-            console.log('Imagens existentes recebidas:', updatedImages);
-        } catch (error) {
-            console.error('Erro ao analisar imagens existentes:', error);
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: 'Propriedade não encontrada'
+            });
         }
-    }
 
-    // Se não houver imagens existentes e nenhuma nova imagem, mantenha as imagens atuais
-    if (updatedImages.length === 0 && (!req.files || req.files.length === 0)) {
-        updatedImages = property.images;
-    }
-
-    // Adicionar novas imagens, se houver
-    if (req.files && req.files.length > 0) {
-        const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
-        updatedImages = [...updatedImages, ...newImagePaths];
-        console.log('Ordem das imagens antes de salvar:', updatedImages);
-    }
-
-    // Processar imagens a serem excluídas
-    let imagesToDelete = [];
-    if (req.body.imagesToDelete) {
-        try {
-            imagesToDelete = JSON.parse(req.body.imagesToDelete);
-            console.log('Imagens a serem excluídas:', imagesToDelete);
-        } catch (error) {
-            console.error('Erro ao analisar imagens a serem excluídas:', error);
-        }
-    }
-
-    // Excluir as imagens do sistema de arquivos
-    await Promise.all(imagesToDelete.map(async (image) => {
-        const imagePath = path.join(__dirname, '../..', 'uploads', path.basename(image));
-        try {
-            await fs.unlink(imagePath);
-            console.log(`Imagem ${imagePath} excluída com sucesso.`);
-        } catch (err) {
-            console.error('Erro ao excluir a imagem:', err);
-        }
-    }));
-
-    // Atualizar o campo images no updateData com a nova ordem
-    updateData.images = updatedImages;
-
-    // Atualizar campos booleanos
-    ['isCondominium', 'hasBackyard', 'hasBalcony', 'hasElevator', 'hasPromotion'].forEach(field => {
-        updateData[field] = updateData[field] === 'true';
-    });
-
-    // Lidar com o campo hasPromotion separadamente
-    if ('exclusivityContract.hasPromotion' in updateData) {
-        updateData.exclusivityContract = {
-            ...property.exclusivityContract,
-            hasPromotion: updateData['exclusivityContract.hasPromotion'] === 'true'
+        // Criar objeto base de atualização
+        const updateData = {
+            title: req.body.title,
+            description: req.body.description,
+            salePrice: req.body.salePrice,
+            desiredNetPrice: req.body.desiredNetPrice,
+            captureCity: req.body.captureCity,
+            captureCEP: req.body.captureCEP,
+            address: req.body.address,
+            neighborhood: req.body.neighborhood,
+            block: req.body.block,
+            propertyType: req.body.propertyType,
+            secondaryType: req.body.secondaryType,
+            totalArea: req.body.totalArea,
+            builtArea: req.body.builtArea,
+            garages: req.body.garages,
+            bedrooms: req.body.bedrooms,
+            suites: req.body.suites,
+            socialBathrooms: req.body.socialBathrooms,
+            floors: req.body.floors,
+            apartmentNumber: req.body.apartmentNumber,
+            floor: req.body.floor,
+            occupancyStatus: req.body.occupancyStatus,
+            keyLocation: req.body.keyLocation,
+            ownerName: req.body.ownerName,
+            ownerContact: req.body.ownerContact,
+            differentials: req.body.differentials,
+            landmarks: req.body.landmarks,
+            generalObservations: req.body.generalObservations
         };
-        delete updateData['exclusivityContract.hasPromotion'];
+
+        // Processar campos booleanos
+        ['isCondominium', 'hasBackyard', 'hasBalcony', 'hasElevator'].forEach(field => {
+            updateData[field] = req.body[field] === 'true';
+        });
+
+        // Processar contrato de exclusividade
+        updateData.exclusivityContract = {
+            startDate: req.body['exclusivityContract.startDate'] || property.exclusivityContract?.startDate,
+            endDate: req.body['exclusivityContract.endDate'] || property.exclusivityContract?.endDate,
+            hasPromotion: req.body.hasPromotion === 'true'
+        };
+
+        // Processar imagens
+        if (req.body.existingImages) {
+            updateData.images = JSON.parse(req.body.existingImages);
+        }
+
+        // Adicionar novas imagens
+        if (req.files && req.files.length > 0) {
+            const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+            updateData.images = [...(updateData.images || []), ...newImagePaths];
+        }
+
+        // Processar exclusões de imagens
+        if (req.body.imagesToDelete) {
+            const imagesToDelete = JSON.parse(req.body.imagesToDelete);
+            for (const imagePath of imagesToDelete) {
+                try {
+                    await fs.unlink(path.join('uploads', path.basename(imagePath)));
+                } catch (err) {
+                    console.error('Erro ao excluir imagem:', err);
+                }
+            }
+        }
+
+        // Manter dados originais de captura
+        updateData.capturedBy = property.capturedBy;
+        updateData.capturedByName = property.capturedByName;
+        updateData.captureDate = property.captureDate;
+
+        console.log('Dados finais para atualização:', updateData);
+
+        property = await Property.findByIdAndUpdate(req.params.id, updateData, {
+            new: true,
+            runValidators: true
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                property
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao atualizar propriedade:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erro ao atualizar propriedade',
+            error: error.message
+        });
     }
-
-    // Atualizar campos numéricos
-    ['totalArea', 'builtArea', 'garages', 'bedrooms', 'suites', 'socialBathrooms', 'floors', 'floor', 'salePrice', 'desiredNetPrice'].forEach(field => {
-        if (field in updateData) {
-            updateData[field] = parseNumberOrNull(updateData[field]);
-        }
-    });
-
-    console.log('Dados de atualização final:', updateData);
-
-    property = await Property.findByIdAndUpdate(req.params.id, updateData, {
-        new: true,
-        runValidators: true
-    });
-
-    console.log('Propriedade atualizada:', property);
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            property
-        }
-    });
 });
 
 exports.removeImage = asyncHandler(async (req, res, next) => {
