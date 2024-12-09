@@ -85,6 +85,35 @@ app.get('/frontend', (req, res) => {
 const authRoutes = require('./routes/auth.routes');
 app.use('/api/users', authRoutes);
 
+// Rota pública para buscar uma propriedade por ID e acesso sem autenticação
+const publicPropertyRoutes = express.Router();
+publicPropertyRoutes.get('/:id', async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id);
+        if (!property) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Propriedade não encontrada'
+            });
+        }
+        res.status(200).json({
+            status: 'success',
+            data: {
+                property
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Erro ao buscar propriedade'
+        });
+    }
+});
+
+// rota pública para acessar as propriedades
+app.use('/api/public/properties', publicPropertyRoutes);
+// fim da rota pública
+
 const propertyRoutes = require('./routes/property.routes');
 app.use('/api/properties', propertyRoutes);
 
