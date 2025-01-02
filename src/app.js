@@ -8,6 +8,7 @@ const leadRoutes = require('./routes/lead.routes');
 const adminRoutes = require('./routes/admin.routes');
 const errorHandler = require('./middleware/error');
 const fs = require('fs');
+const fileUpload = require('express-fileupload');
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -29,6 +30,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Configurar express-fileupload antes de outras configurações
+app.use(fileUpload({
+    createParentPath: true,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB max
+    },
+    useTempFiles: true,
+    tempFileDir: '/tmp/',
+    debug: true
+}));
+
 // Configuração do CORS
 app.use(cors({
   origin: ['https://williamhssilva.github.io', 'http://127.0.0.1:5500'], // Ajuste para a origem correta do seu frontend
@@ -36,7 +48,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-
 
 // Middleware para parsing de JSON
 app.use(express.json({ limit: '10mb' }));

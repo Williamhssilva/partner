@@ -5,11 +5,12 @@ const {
     createLead,
     updateLead,
     deleteLead,
-    updateLeadStage  // Adicione esta linha
+    updateLeadStage
 } = require('../controllers/lead.controller');
 
 const { protect, authorize } = require('../middleware/auth.middleware');
-const leadController = require('../controllers/lead.controller'); // Adicione esta linha
+const leadController = require('../controllers/lead.controller');
+const documentController = require('../controllers/document.controller');
 
 const router = express.Router();
 
@@ -28,12 +29,14 @@ router.route('/:id')
 router.route('/:id/stage')
     .put(authorize('corretor', 'administrador'), updateLeadStage);
 
-// Atualizar o estágio do lead
-//router.put('/:id/stage', updateLeadStage);
-
 // Linkar propriedade ao lead
-router.post('/:id/link-property', protect, leadController.linkPropertyToLead);
+router.post('/:id/link-property', leadController.linkPropertyToLead);
+router.delete('/:id/unlink-property', leadController.unlinkPropertyFromLead);
 
-router.delete('/:id/unlink-property', protect, leadController.unlinkPropertyFromLead);
+// Rotas de documentos
+router.post('/:id/documents', documentController.uploadDocument);
+router.get('/:id/documents', documentController.getDocuments);
+router.get('/:id/documents/:documentId/download', documentController.downloadDocument);
+router.delete('/:id/documents/:documentId', protect, documentController.deleteDocument);
 
 module.exports = router;
