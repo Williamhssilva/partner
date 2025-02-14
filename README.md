@@ -66,11 +66,6 @@ O servidor estará rodando em `http://localhost:5000`.
 
 Para mais detalhes sobre os endpoints, consulte a documentação da API.
 
-## Contribuindo
-@UmarginaU
-
-Por favor, leia CONTRIBUTING.md para detalhes sobre nosso código de conduta e o processo para enviar pull requests (não implementado).
-
 ## Licença
 
 Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE.md para detalhes.
